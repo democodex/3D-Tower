@@ -337,12 +337,16 @@
                 <span class="slider-label" style="display: flex; justify-content: space-between;">Water Flow Theme <span id="cone-color-val" style="color: #00f2fe; font-weight: 600;">Cyan</span></span>
                 <input type="range" id="cone-color-slider" min="0" max="360" step="1" value="190" class="slider" style="background: linear-gradient(to right, #ff0000, #ff8800, #ffff00, #00ff00, #00ffff, #0000ff, #8800ff, #ff00ff, #ff0000); height: 8px; border-radius: 4px; outline: none; -webkit-appearance: none;">
             </div>
-            <div class="slider-row">
+            <div class="slider-row" style="margin-bottom: 12px;">
                 <span class="slider-label" style="display: flex; justify-content: space-between;">Active Height Coverage <span id="anim-height-val" style="color: #00f2fe; font-weight: 600;">100%</span></span>
                 <input type="range" id="anim-height-slider" min="0" max="100" step="1" value="100" class="slider">
             </div>
+            <div class="slider-row">
+                <span class="slider-label" style="display: flex; justify-content: space-between;">Animation Opacity <span id="anim-opacity-val" style="color: #00f2fe; font-weight: 600;">100%</span></span>
+                <input type="range" id="anim-opacity-slider" min="0" max="100" step="1" value="100" class="slider">
+            </div>
             <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 8px; line-height: 1.35;">
-                Slide to adjust the vertical portion of the building glass window mesh that is animated (moving up from the base of the tower).
+                Slide to adjust the vertical animated coverage and transparency (opacity) of the flowing bioluminescent water.
             </div>
         </div>
 
@@ -934,12 +938,17 @@
                             const animVal = animSlider ? parseInt(animSlider.value) : 100;
                             const initialThreshold = 326649.19 * (1.0 - animVal / 100.0);
 
+                            const opacitySlider = document.getElementById('anim-opacity-slider');
+                            const initialOpacity = opacitySlider ? parseFloat(opacitySlider.value) / 100.0 : 1.0;
+
                             screenMaterial = new THREE.ShaderMaterial({
                                 uniforms: {
                                     map: { value: crownScreenTexture },
                                     uAnimHeightThreshold: { value: initialThreshold },
-                                    uDarkGlassColor: { value: new THREE.Color(0x0c1322) } // Deep navy/slate inactive glass color
+                                    uDarkGlassColor: { value: new THREE.Color(0x0c1322) }, // Deep navy/slate inactive glass color
+                                    uAnimOpacity: { value: initialOpacity }
                                 },
+                                transparent: true,
                                 vertexShader: `
                                     varying vec2 vUv;
                                     varying float vLocalY;
@@ -953,18 +962,25 @@
                                     uniform sampler2D map;
                                     uniform float uAnimHeightThreshold;
                                     uniform vec3 uDarkGlassColor;
+                                    uniform float uAnimOpacity;
                                     varying vec2 vUv;
                                     varying float vLocalY;
                                     void main() {
                                         float transitionWidth = 8000.0; // Smooth blend threshold
+                                        
+                                        // Base glass is a semi-transparent deep slate color
+                                        vec4 baseColor = vec4(uDarkGlassColor, 0.55);
+
                                         if (vLocalY < uAnimHeightThreshold - transitionWidth) {
-                                            gl_FragColor = vec4(uDarkGlassColor, 1.0);
+                                            gl_FragColor = baseColor;
                                         } else if (vLocalY < uAnimHeightThreshold) {
                                             float t = smoothstep(uAnimHeightThreshold - transitionWidth, uAnimHeightThreshold, vLocalY);
                                             vec4 animatedColor = texture2D(map, vUv);
-                                            gl_FragColor = mix(vec4(uDarkGlassColor, 1.0), animatedColor, t);
+                                            vec4 activeColor = vec4(animatedColor.rgb, uAnimOpacity);
+                                            gl_FragColor = mix(baseColor, activeColor, t);
                                         } else {
-                                            gl_FragColor = texture2D(map, vUv);
+                                            vec4 animatedColor = texture2D(map, vUv);
+                                            gl_FragColor = vec4(animatedColor.rgb, uAnimOpacity);
                                         }
                                     }
                                 `,
@@ -1136,12 +1152,17 @@
                     const animVal = animSlider ? parseInt(animSlider.value) : 100;
                     const initialThreshold = 326649.19 * (1.0 - animVal / 100.0);
 
+                    const opacitySlider = document.getElementById('anim-opacity-slider');
+                    const initialOpacity = opacitySlider ? parseFloat(opacitySlider.value) / 100.0 : 1.0;
+
                     screenMaterial = new THREE.ShaderMaterial({
                         uniforms: {
                             map: { value: crownScreenTexture },
                             uAnimHeightThreshold: { value: initialThreshold },
-                            uDarkGlassColor: { value: new THREE.Color(0x0c1322) } // Deep navy/slate inactive glass color
+                            uDarkGlassColor: { value: new THREE.Color(0x0c1322) }, // Deep navy/slate inactive glass color
+                            uAnimOpacity: { value: initialOpacity }
                         },
+                        transparent: true,
                         vertexShader: `
                             varying vec2 vUv;
                             varying float vLocalY;
@@ -1155,18 +1176,25 @@
                             uniform sampler2D map;
                             uniform float uAnimHeightThreshold;
                             uniform vec3 uDarkGlassColor;
+                            uniform float uAnimOpacity;
                             varying vec2 vUv;
                             varying float vLocalY;
                             void main() {
                                 float transitionWidth = 8000.0; // Smooth blend threshold
+                                
+                                // Base glass is a semi-transparent deep slate color
+                                vec4 baseColor = vec4(uDarkGlassColor, 0.55);
+
                                 if (vLocalY < uAnimHeightThreshold - transitionWidth) {
-                                    gl_FragColor = vec4(uDarkGlassColor, 1.0);
+                                    gl_FragColor = baseColor;
                                 } else if (vLocalY < uAnimHeightThreshold) {
                                     float t = smoothstep(uAnimHeightThreshold - transitionWidth, uAnimHeightThreshold, vLocalY);
                                     vec4 animatedColor = texture2D(map, vUv);
-                                    gl_FragColor = mix(vec4(uDarkGlassColor, 1.0), animatedColor, t);
+                                    vec4 activeColor = vec4(animatedColor.rgb, uAnimOpacity);
+                                    gl_FragColor = mix(baseColor, activeColor, t);
                                 } else {
-                                    gl_FragColor = texture2D(map, vUv);
+                                    vec4 animatedColor = texture2D(map, vUv);
+                                    gl_FragColor = vec4(animatedColor.rgb, uAnimOpacity);
                                 }
                             }
                         `,
@@ -1769,6 +1797,19 @@
             }
         });
 
+        document.getElementById('anim-opacity-slider').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('anim-opacity-val').innerText = `${val}%`;
+
+            // Translate percentage (0-100) to alpha coefficient (0.0 to 1.0)
+            const opacity = val / 100.0;
+
+            // Update screenMaterial shader uniforms in real-time
+            if (screenMaterial && screenMaterial.uniforms && screenMaterial.uniforms.uAnimOpacity) {
+                screenMaterial.uniforms.uAnimOpacity.value = opacity;
+            }
+        });
+
         // --- Presets Manager ---
         const presets = {
             default_noon: {
@@ -1816,6 +1857,28 @@
 
             renderer.toneMappingExposure = preset.brightness;
             updateTimeOfDay(preset.time);
+
+            // Sync/Reset the height coverage and opacity sliders to full visual definition for presets
+            const heightSlider = document.getElementById('anim-height-slider');
+            if (heightSlider) {
+                const heightVal = (preset.uAnimHeightVal !== undefined) ? preset.uAnimHeightVal : 100;
+                heightSlider.value = heightVal;
+                document.getElementById('anim-height-val').innerText = `${heightVal}%`;
+                const threshold = 326649.19 * (1.0 - heightVal / 100.0);
+                if (screenMaterial && screenMaterial.uniforms && screenMaterial.uniforms.uAnimHeightThreshold) {
+                    screenMaterial.uniforms.uAnimHeightThreshold.value = threshold;
+                }
+            }
+
+            const opacitySlider = document.getElementById('anim-opacity-slider');
+            if (opacitySlider) {
+                const opacityVal = (preset.uAnimOpacityVal !== undefined) ? preset.uAnimOpacityVal : 100;
+                opacitySlider.value = opacityVal;
+                document.getElementById('anim-opacity-val').innerText = `${opacityVal}%`;
+                if (screenMaterial && screenMaterial.uniforms && screenMaterial.uniforms.uAnimOpacity) {
+                    screenMaterial.uniforms.uAnimOpacity.value = opacityVal / 100.0;
+                }
+            }
         }
 
         document.getElementById('preset-select').addEventListener('change', (e) => {
@@ -1835,7 +1898,9 @@
                 brightness: parseFloat(document.getElementById('brightness-slider').value),
                 shadow: parseFloat(document.getElementById('shadow-slider').value),
                 cameraPos: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-                cameraTar: { x: controls.target.x, y: controls.target.y, z: controls.target.z }
+                cameraTar: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
+                uAnimHeightVal: parseInt(document.getElementById('anim-height-slider').value),
+                uAnimOpacityVal: parseInt(document.getElementById('anim-opacity-slider').value)
             };
 
             const customPresets = JSON.parse(localStorage.getItem('sf_custom_presets') || '[]');
