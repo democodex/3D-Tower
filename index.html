@@ -340,6 +340,15 @@
                     <option value="solid">Solid</option>
                 </select>
             </div>
+            <div class="slider-row" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: flex-start; gap: 12px;">
+                <span class="slider-label" style="margin-bottom: 0; min-width: 50px;">Target</span>
+                <label style="display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: #e2e8f0; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="target-windows" checked style="cursor: pointer; accent-color: #00f2fe;"> Windows
+                </label>
+                <label style="display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: #e2e8f0; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="target-ribs" style="cursor: pointer; accent-color: #00f2fe;"> Ribs
+                </label>
+            </div>
             <div class="slider-row" style="margin-bottom: 12px;">
                 <span class="slider-label" style="display: flex; justify-content: space-between;">Color <span id="cone-color-val" style="color: #00f2fe; font-weight: 600;">Cyan</span></span>
                 <input type="range" id="cone-color-slider" min="0" max="360" step="1" value="190" class="slider" style="background: linear-gradient(to right, #ff0000, #ff8800, #ffff00, #00ff00, #00ffff, #0000ff, #8800ff, #ff00ff, #ff0000); height: 8px; border-radius: 4px; outline: none; -webkit-appearance: none;">
@@ -452,6 +461,7 @@
         // Global material and mesh references for wireframe/realistic synchronization
         let screenMaterial = null;
         let concreteMaterial = null;
+        let glassMaterial = null;
         let floorMat = null;
         let modelMaterial = null;
         let cityHighResTower = null;
@@ -1011,6 +1021,14 @@
                             });
                         }
 
+                        if (!glassMaterial) {
+                            glassMaterial = new THREE.MeshStandardMaterial({
+                                color: 0x111827, // Metallic reflective glass
+                                roughness: 0.12,
+                                metalness: 0.85
+                            });
+                        }
+
                         const objLoader = new OBJLoader();
                         objLoader.load(
                             'assets/SF-Tower/Salesforse tower_obj.obj',
@@ -1036,6 +1054,9 @@
                                     sfCenter.z - objCenter.z * (scaleZ * 1.05)
                                 );
 
+                                const targetWindows = document.getElementById('target-windows') ? document.getElementById('target-windows').checked : true;
+                                const targetRibs = document.getElementById('target-ribs') ? document.getElementById('target-ribs').checked : false;
+
                                 // Apply styling to the tower submeshes (glass skin vs structural concrete columns)
                                 obj.traverse((child) => {
                                     if (child.isMesh) {
@@ -1044,9 +1065,11 @@
                                         const name = child.name.toLowerCase();
 
                                         if (name === 'salesforce_02' || name === 'salesforce_13' || name === 'salesforce_03') {
-                                            child.material = screenMaterial;
+                                             child.material = targetWindows ? screenMaterial : glassMaterial;
+                                        } else if (name === 'salesforce_14') {
+                                             child.material = targetRibs ? screenMaterial : concreteMaterial;
                                         } else {
-                                            child.material = concreteMaterial;
+                                             child.material = concreteMaterial;
                                         }
                                     }
                                 });
@@ -1232,11 +1255,16 @@
                         flatShading: false
                     });
 
-                    const glassMaterial = new THREE.MeshStandardMaterial({
-                        color: 0x111827, // Metallic reflective glass
-                        roughness: 0.12,
-                        metalness: 0.85
-                    });
+                    if (!glassMaterial) {
+                        glassMaterial = new THREE.MeshStandardMaterial({
+                            color: 0x111827, // Metallic reflective glass
+                            roughness: 0.12,
+                            metalness: 0.85
+                        });
+                    }
+
+                    const targetWindows = document.getElementById('target-windows') ? document.getElementById('target-windows').checked : true;
+                    const targetRibs = document.getElementById('target-ribs') ? document.getElementById('target-ribs').checked : false;
 
                     obj.traverse((child) => {
                         if (child.isMesh) {
@@ -1245,17 +1273,11 @@
 
                             const name = child.name ? child.name.toLowerCase() : '';
 
-                            // A. Entire Glass Windows / Building Skin gets our animated illuminated swarming water!
-                            // Since the high-resolution OBJ has non-semantic 3ds Max group names, we map them directly:
-                            // - salesforce_02 represents the main glass panel skin of the entire tower.
-                            // - salesforce_13 and salesforce_03 represent the upper crown glass panels of the tower.
                             if (name === 'salesforce_02' || name === 'salesforce_13' || name === 'salesforce_03') {
-                                child.material = screenMaterial;
-                            }
-                            // B. Structural ribs/columns (keeps structural definition & concrete contours 100% pristine!)
-                            // - salesforce_14 represents the massive bevelled concrete column grid rib structure surrounding the glass.
-                            // - salesforce_04, salesforce_01, salesforce_11, etc. represent primary concrete columns and beams.
-                            else {
+                                child.material = targetWindows ? screenMaterial : glassMaterial;
+                            } else if (name === 'salesforce_14') {
+                                child.material = targetRibs ? screenMaterial : concreteMaterial;
+                            } else {
                                 child.material = concreteMaterial;
                             }
                         }
@@ -1876,6 +1898,34 @@
             }
         });
 
+        function updateTowerMaterials() {
+            const targetWindows = document.getElementById('target-windows') ? document.getElementById('target-windows').checked : true;
+            const targetRibs = document.getElementById('target-ribs') ? document.getElementById('target-ribs').checked : false;
+
+            const applyToMesh = (mesh) => {
+                if (!mesh.isMesh) return;
+                const name = mesh.name ? mesh.name.toLowerCase() : '';
+
+                if (name === 'salesforce_02' || name === 'salesforce_13' || name === 'salesforce_03') {
+                    mesh.material = targetWindows ? screenMaterial : glassMaterial;
+                } else if (name === 'salesforce_14') {
+                    mesh.material = targetRibs ? screenMaterial : concreteMaterial;
+                } else {
+                    mesh.material = concreteMaterial;
+                }
+            };
+
+            if (soloTowerGroup) {
+                soloTowerGroup.traverse(applyToMesh);
+            }
+            if (cityHighResTower) {
+                cityHighResTower.traverse(applyToMesh);
+            }
+        }
+
+        document.getElementById('target-windows').addEventListener('change', updateTowerMaterials);
+        document.getElementById('target-ribs').addEventListener('change', updateTowerMaterials);
+
         // --- Presets Manager ---
         const presets = {
             default_noon: {
@@ -1950,6 +2000,16 @@
             if (effectSelect) {
                 effectSelect.value = (preset.skinEffect !== undefined) ? preset.skinEffect : 'water';
             }
+
+            const targetWindowsCheckbox = document.getElementById('target-windows');
+            if (targetWindowsCheckbox) {
+                targetWindowsCheckbox.checked = (preset.targetWindows !== undefined) ? preset.targetWindows : true;
+            }
+            const targetRibsCheckbox = document.getElementById('target-ribs');
+            if (targetRibsCheckbox) {
+                targetRibsCheckbox.checked = (preset.targetRibs !== undefined) ? preset.targetRibs : false;
+            }
+            updateTowerMaterials();
         }
 
         document.getElementById('preset-select').addEventListener('change', (e) => {
@@ -1972,7 +2032,9 @@
                 cameraTar: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
                 uAnimHeightVal: parseInt(document.getElementById('anim-height-slider').value),
                 uSeeThroughVal: parseInt(document.getElementById('anim-see-through-slider').value),
-                skinEffect: document.getElementById('skin-effect-select').value
+                skinEffect: document.getElementById('skin-effect-select').value,
+                targetWindows: document.getElementById('target-windows').checked,
+                targetRibs: document.getElementById('target-ribs').checked
             };
 
             const customPresets = JSON.parse(localStorage.getItem('sf_custom_presets') || '[]');
