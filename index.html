@@ -333,20 +333,24 @@
 
         <div class="control-section">
             <h3>Building Skin (Illuminated Water)</h3>
+            <div class="slider-row" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                <span class="slider-label" style="margin-bottom: 0;">Effect</span>
+                <select id="skin-effect-select" style="background: rgba(11,15,30,0.8); border: 1px solid rgba(255,255,255,0.12); color: #e2e8f0; font-size: 0.7rem; padding: 4px; border-radius: 4px; outline: none; cursor: pointer; width: 120px;">
+                    <option value="water" selected>Water</option>
+                    <option value="solid">Solid</option>
+                </select>
+            </div>
             <div class="slider-row" style="margin-bottom: 12px;">
-                <span class="slider-label" style="display: flex; justify-content: space-between;">Water Flow Theme <span id="cone-color-val" style="color: #00f2fe; font-weight: 600;">Cyan</span></span>
+                <span class="slider-label" style="display: flex; justify-content: space-between;">Color <span id="cone-color-val" style="color: #00f2fe; font-weight: 600;">Cyan</span></span>
                 <input type="range" id="cone-color-slider" min="0" max="360" step="1" value="190" class="slider" style="background: linear-gradient(to right, #ff0000, #ff8800, #ffff00, #00ff00, #00ffff, #0000ff, #8800ff, #ff00ff, #ff0000); height: 8px; border-radius: 4px; outline: none; -webkit-appearance: none;">
             </div>
             <div class="slider-row" style="margin-bottom: 12px;">
-                <span class="slider-label" style="display: flex; justify-content: space-between;">Active Height Coverage <span id="anim-height-val" style="color: #00f2fe; font-weight: 600;">100%</span></span>
+                <span class="slider-label" style="display: flex; justify-content: space-between;">Height <span id="anim-height-val" style="color: #00f2fe; font-weight: 600;">100%</span></span>
                 <input type="range" id="anim-height-slider" min="0" max="100" step="1" value="100" class="slider">
             </div>
             <div class="slider-row">
-                <span class="slider-label" style="display: flex; justify-content: space-between;">Animation See-Through <span id="anim-see-through-val" style="color: #00f2fe; font-weight: 600;">100%</span></span>
+                <span class="slider-label" style="display: flex; justify-content: space-between;">Opacity <span id="anim-see-through-val" style="color: #00f2fe; font-weight: 600;">100%</span></span>
                 <input type="range" id="anim-see-through-slider" min="0" max="100" step="1" value="100" class="slider">
-            </div>
-            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 8px; line-height: 1.35;">
-                Slide to adjust the vertical animated coverage and the see-through transparency (0% is a solid opaque overlay, 100% is highly transparent).
             </div>
         </div>
 
@@ -980,14 +984,15 @@
                                             // 0% see-through means fully opaque uDarkGlassColor background under the animation,
                                             // which fully obscures any underlying structures.
                                             // 100% see-through lets you see right through the background.
-                                            vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb, animatedColor.a);
+                                            // Multiply by 2.5 for highly intense, saturated color and bloom
+                                            vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb * 2.5, animatedColor.a);
                                             float activeAlpha = mix(1.0, animatedColor.a, uSeeThrough);
                                             vec4 activeColor = vec4(activeRgb, activeAlpha);
                                             
                                             gl_FragColor = mix(baseColor, activeColor, t);
                                         } else {
                                             vec4 animatedColor = texture2D(map, vUv);
-                                            vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb, animatedColor.a);
+                                            vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb * 2.5, animatedColor.a);
                                             float activeAlpha = mix(1.0, animatedColor.a, uSeeThrough);
                                             gl_FragColor = vec4(activeRgb, activeAlpha);
                                         }
@@ -1203,14 +1208,15 @@
                                     // 0% see-through means fully opaque uDarkGlassColor background under the animation,
                                     // which fully obscures any underlying structures.
                                     // 100% see-through lets you see right through the background.
-                                    vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb, animatedColor.a);
+                                    // Multiply by 2.5 for highly intense, saturated color and bloom
+                                    vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb * 2.5, animatedColor.a);
                                     float activeAlpha = mix(1.0, animatedColor.a, uSeeThrough);
                                     vec4 activeColor = vec4(activeRgb, activeAlpha);
                                     
                                     gl_FragColor = mix(baseColor, activeColor, t);
                                 } else {
                                     vec4 animatedColor = texture2D(map, vUv);
-                                    vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb, animatedColor.a);
+                                    vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb * 2.5, animatedColor.a);
                                     float activeAlpha = mix(1.0, animatedColor.a, uSeeThrough);
                                     gl_FragColor = vec4(activeRgb, activeAlpha);
                                 }
@@ -1549,88 +1555,128 @@
                 // Read user color slider selection (fallback to 190° Cyan if slider element not present yet)
                 const sliderEl = document.getElementById('cone-color-slider');
                 const userHue = sliderEl ? parseFloat(sliderEl.value) : 190;
-                
-                // Clear background to a deep cosmic dark space color
-                // 4A. Slow fade background clear to let the rising water particles leave glowing bioluminescent fluid trails!
-                crownScreenCtx.fillStyle = `hsla(${userHue}, 100%, 3%, 0.12)`; // Very slow decay for organic liquid trails
-                crownScreenCtx.fillRect(0, 0, width, height);
 
-                // Additive screen blending so water layers and particles glow vibrantly when merging
-                crownScreenCtx.globalCompositeOperation = 'screen';
+                // Read skin effect select element
+                const effectEl = document.getElementById('skin-effect-select');
+                const skinEffect = effectEl ? effectEl.value : 'water';
 
-                // 4B. Initialize water current particles (the swarming fluid) if not already done
-                if (!window.waterParticles) {
-                    window.waterParticles = [];
-                    for (let i = 0; i < 220; i++) {
-                        window.waterParticles.push({
-                            x: Math.random() * width,
-                            y: Math.random() * height,
-                            speedY: 1.6 + Math.random() * 2.8, // Speed climbing upwards
-                            size: 1.2 + Math.random() * 3.2,
-                            waveOffset: Math.random() * Math.PI * 2,
-                            alpha: 0.4 + Math.random() * 0.55
-                        });
+                if (skinEffect === 'solid') {
+                    // --- SOLID COLOR FACADE ---
+                    if (userHue === 360) {
+                        crownScreenCtx.fillStyle = '#ffffff'; // Pristine solid white
+                    } else {
+                        crownScreenCtx.fillStyle = `hsl(${userHue}, 100%, 50%)`; // Vivid fully-saturated color
                     }
+                    crownScreenCtx.fillRect(0, 0, width, height);
+                } else {
+                    // --- SWARMING WATER CURRENT ANIMATION ---
+                    // 4A. Slow fade background clear to let the rising water particles leave glowing bioluminescent fluid trails!
+                    if (userHue === 360) {
+                        crownScreenCtx.fillStyle = `rgba(5, 5, 5, 0.12)`; // Very slow dark decay for white trails
+                    } else {
+                        crownScreenCtx.fillStyle = `hsla(${userHue}, 100%, 3%, 0.12)`; // Slow thematic color decay
+                    }
+                    crownScreenCtx.fillRect(0, 0, width, height);
+
+                    // Additive screen blending so water layers and particles glow vibrantly when merging
+                    crownScreenCtx.globalCompositeOperation = 'screen';
+
+                    // 4B. Initialize water current particles if not already done
+                    if (!window.waterParticles) {
+                        window.waterParticles = [];
+                        for (let i = 0; i < 220; i++) {
+                            window.waterParticles.push({
+                                x: Math.random() * width,
+                                y: Math.random() * height,
+                                speedY: 1.6 + Math.random() * 2.8, // Speed climbing upwards
+                                size: 1.2 + Math.random() * 3.2,
+                                waveOffset: Math.random() * Math.PI * 2,
+                                alpha: 0.4 + Math.random() * 0.55
+                            });
+                        }
+                    }
+
+                    // 4C. Update and Draw each bioluminescent water droplet
+                    window.waterParticles.forEach((p) => {
+                        // Surge upwards (water flowing up the building glass!)
+                        p.y -= p.speedY;
+
+                        // Organic fluid horizontal swaying (sine wave current flow field)
+                        const swayFrequency = 0.015;
+                        const swayAmplitude = 2.4;
+                        p.x += Math.sin(p.y * swayFrequency + time * 1.8 + p.waveOffset) * swayAmplitude;
+
+                        // Loop particle back to bottom if it overflows the top
+                        if (p.y < 0) {
+                            p.y = height;
+                            p.x = Math.random() * width;
+                        }
+
+                        // Seamless horizontal wrapping around the cylindrical tower windows
+                        p.x = (p.x + width) % width;
+
+                        // Create beautiful glowing light core for each liquid droplet
+                        let dropletGrad = crownScreenCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3.5);
+                        
+                        if (userHue === 360) {
+                            // Pure White gradient
+                            dropletGrad.addColorStop(0, `hsla(0, 0%, 100%, ${p.alpha})`);
+                            dropletGrad.addColorStop(0.35, `hsla(0, 0%, 90%, ${p.alpha * 0.45})`);
+                            dropletGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                        } else {
+                            // Vivid HSL spectrum gradient
+                            const dropletHue = (userHue + Math.sin(time * 0.6 + p.y * 0.01) * 15) % 360;
+                            dropletGrad.addColorStop(0, `hsla(${dropletHue}, 100%, 75%, ${p.alpha})`);
+                            dropletGrad.addColorStop(0.35, `hsla(${(dropletHue + 15) % 360}, 100%, 50%, ${p.alpha * 0.4})`);
+                            dropletGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                        }
+
+                        crownScreenCtx.fillStyle = dropletGrad;
+                        crownScreenCtx.beginPath();
+                        crownScreenCtx.arc(p.x, p.y, p.size * 3.5, 0, Math.PI * 2);
+                        crownScreenCtx.fill();
+                    });
+
+                    // 4D. Add shimmering vertical ambient water caustics (glowing light ripples)
+                    const causticsCount = 3;
+                    for (let c = 0; c < causticsCount; c++) {
+                        const waveY = (time * 75 + c * (height / causticsCount)) % height;
+                        const causticGrad = crownScreenCtx.createLinearGradient(0, waveY, 0, waveY + 90);
+                        
+                        if (userHue === 360) {
+                            causticGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+                            causticGrad.addColorStop(0.5, `rgba(255, 255, 255, 0.25)`);
+                            causticGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                        } else {
+                            const causticHue = (userHue + Math.sin(time * 0.5 + c) * 20) % 360;
+                            causticGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+                            causticGrad.addColorStop(0.5, `hsla(${causticHue}, 100%, 48%, 0.18)`);
+                            causticGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                        }
+
+                        crownScreenCtx.fillStyle = causticGrad;
+                        crownScreenCtx.fillRect(0, waveY, width, 90);
+                    }
+
+                    // Restore default blend mode
+                    crownScreenCtx.globalCompositeOperation = 'source-over';
                 }
 
-                // 4C. Update and Draw each bioluminescent water droplet
-                window.waterParticles.forEach((p) => {
-                    // Surge upwards (water flowing up the building glass!)
-                    p.y -= p.speedY;
-
-                    // Organic fluid horizontal swaying (sine wave current flow field)
-                    const swayFrequency = 0.015;
-                    const swayAmplitude = 2.4;
-                    p.x += Math.sin(p.y * swayFrequency + time * 1.8 + p.waveOffset) * swayAmplitude;
-
-                    // Loop particle back to bottom if it overflows the top
-                    if (p.y < 0) {
-                        p.y = height;
-                        p.x = Math.random() * width;
-                    }
-
-                    // Seamless horizontal wrapping around the cylindrical tower windows
-                    p.x = (p.x + width) % width;
-
-                    // Create beautiful glowing light core for each liquid droplet
-                    const dropletHue = (userHue + Math.sin(time * 0.6 + p.y * 0.01) * 15) % 360;
-                    const dropletGrad = crownScreenCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3.5);
-                    
-                    dropletGrad.addColorStop(0, `hsla(${dropletHue}, 100%, 75%, ${p.alpha})`);
-                    dropletGrad.addColorStop(0.35, `hsla(${(dropletHue + 15) % 360}, 100%, 50%, ${p.alpha * 0.4})`);
-                    dropletGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-                    crownScreenCtx.fillStyle = dropletGrad;
-                    crownScreenCtx.beginPath();
-                    crownScreenCtx.arc(p.x, p.y, p.size * 3.5, 0, Math.PI * 2);
-                    crownScreenCtx.fill();
-                });
-
-                // 4D. Add shimmering vertical ambient water caustics (glowing light ripples)
-                const causticsCount = 3;
-                for (let c = 0; c < causticsCount; c++) {
-                    const waveY = (time * 75 + c * (height / causticsCount)) % height;
-                    const causticGrad = crownScreenCtx.createLinearGradient(0, waveY, 0, waveY + 90);
-                    
-                    const causticHue = (userHue + Math.sin(time * 0.5 + c) * 20) % 360;
-                    causticGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-                    causticGrad.addColorStop(0.5, `hsla(${causticHue}, 100%, 48%, 0.18)`);
-                    causticGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-                    crownScreenCtx.fillStyle = causticGrad;
-                    crownScreenCtx.fillRect(0, waveY, width, 90);
-                }
-
-                // Restore default blend mode
-                crownScreenCtx.globalCompositeOperation = 'source-over';
-
-                // 4E. Overlay horizontal glass panel lines to align with building structure
-                crownScreenCtx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                // 4E. Overlay horizontal & vertical glass panel lines to align with building structure
+                crownScreenCtx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
                 crownScreenCtx.lineWidth = 1;
+                // Vertical window divisions
                 for (let x = 0; x < width; x += 128) {
                     crownScreenCtx.beginPath();
                     crownScreenCtx.moveTo(x, 0);
                     crownScreenCtx.lineTo(x, height);
+                    crownScreenCtx.stroke();
+                }
+                // Horizontal floor slab panel divisions
+                for (let y = 0; y < height; y += 64) {
+                    crownScreenCtx.beginPath();
+                    crownScreenCtx.moveTo(0, y);
+                    crownScreenCtx.lineTo(width, y);
                     crownScreenCtx.stroke();
                 }
 
@@ -1790,7 +1836,8 @@
         document.getElementById('cone-color-slider').addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
             let label = "Cyan";
-            if (val < 15) label = "Red";
+            if (val === 360) label = "White";
+            else if (val < 15) label = "Red";
             else if (val < 45) label = "Orange";
             else if (val < 75) label = "Yellow";
             else if (val < 145) label = "Green";
@@ -1799,7 +1846,8 @@
             else if (val < 325) label = "Magenta";
             else label = "Red";
             
-            document.getElementById('cone-color-val').innerText = `${label} (${val}°)`;
+            const displayStr = (val === 360) ? "White" : `${label} (${val}°)`;
+            document.getElementById('cone-color-val').innerText = displayStr;
         });
 
         document.getElementById('anim-height-slider').addEventListener('input', (e) => {
@@ -1897,6 +1945,11 @@
                     screenMaterial.uniforms.uSeeThrough.value = seeThroughVal / 100.0;
                 }
             }
+
+            const effectSelect = document.getElementById('skin-effect-select');
+            if (effectSelect) {
+                effectSelect.value = (preset.skinEffect !== undefined) ? preset.skinEffect : 'water';
+            }
         }
 
         document.getElementById('preset-select').addEventListener('change', (e) => {
@@ -1918,7 +1971,8 @@
                 cameraPos: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
                 cameraTar: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
                 uAnimHeightVal: parseInt(document.getElementById('anim-height-slider').value),
-                uSeeThroughVal: parseInt(document.getElementById('anim-see-through-slider').value)
+                uSeeThroughVal: parseInt(document.getElementById('anim-see-through-slider').value),
+                skinEffect: document.getElementById('skin-effect-select').value
             };
 
             const customPresets = JSON.parse(localStorage.getItem('sf_custom_presets') || '[]');
