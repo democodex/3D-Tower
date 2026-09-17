@@ -436,6 +436,13 @@
             });
         }
 
+        // Global material and mesh references for wireframe/realistic synchronization
+        let screenMaterial = null;
+        let concreteMaterial = null;
+        let floorMat = null;
+        let modelMaterial = null;
+        let cityHighResTower = null;
+
         // WebGL Renderer
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -800,6 +807,13 @@
             }
         }
 
+        // Cache original procedural materials for wireframe/realistic restoration
+        proceduralGroup.traverse((child) => {
+            if (child.isMesh) {
+                child.userData.originalMaterial = child.material;
+            }
+        });
+
         // --- 2. CGTrader Model Loader (Ready to Load once downloaded) ---
         let cgtraderModelLoaded = false;
         const cgtraderPath = './assets/San-Francisco.fbx';
@@ -847,7 +861,7 @@
                     }
 
                     // A gorgeous, highly-reflective bright concrete clay material that shows all architectural contours and details
-                    const modelMaterial = new THREE.MeshStandardMaterial({
+                    modelMaterial = new THREE.MeshStandardMaterial({
                         color: 0xe2e8f0, // Clean, bright white-grey concrete color
                         roughness: 0.65,
                         metalness: 0.15,
@@ -888,59 +902,89 @@
                         }
                     });
 
-                    // 3. Create and append a solid, elliptical crown mesh that covers the skeletal peak with animated screen panels
+                    // 3. Selectively replace the low-res FBX Salesforce Tower with our nice 3D high-res Salesforce Tower OBJ!
                     if (tallestMesh) {
+                        tallestMesh.visible = false; // Hide the low-resolution structural wireframe tower
+
                         const sfBox = new THREE.Box3().setFromObject(tallestMesh);
                         const sfSize = new THREE.Vector3();
                         sfBox.getSize(sfSize);
                         const sfCenter = new THREE.Vector3();
                         sfBox.getCenter(sfCenter);
-                        
-                        // We construct the solid screen panels crown matching the top 13% height of Salesforce Tower
-                        const crownHeight = sfSize.y * 0.125;
-                        const radiusBottom = Math.max(sfSize.x, sfSize.z) * 0.44;
-                        const radiusTop = radiusBottom * 0.38;
-                        
-                        const crownGeo = new THREE.CylinderGeometry(
-                            radiusTop,      // tapered top
-                            radiusBottom,   // bottom radius
-                            crownHeight,    // height
-                            32,             // radial segments
-                            1,              // height segments
-                            false           // openEnded
+
+                        // Ensure canvas screen global contexts and materials are initialized
+                        if (!crownScreenCtx) {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 1024;
+                            canvas.height = 512;
+                            crownScreenCtx = canvas.getContext('2d');
+
+                            crownScreenTexture = new THREE.CanvasTexture(canvas);
+                            crownScreenTexture.wrapS = THREE.RepeatWrapping;
+                            crownScreenTexture.wrapT = THREE.RepeatWrapping;
+                        }
+
+                        if (!screenMaterial) {
+                            screenMaterial = new THREE.MeshBasicMaterial({
+                                map: crownScreenTexture,
+                                side: THREE.DoubleSide
+                            });
+                        }
+
+                        if (!concreteMaterial) {
+                            concreteMaterial = new THREE.MeshStandardMaterial({
+                                color: 0xf1f5f9, // Clean white support columns
+                                roughness: 0.5,
+                                metalness: 0.15,
+                                flatShading: false
+                            });
+                        }
+
+                        const objLoader = new OBJLoader();
+                        objLoader.load(
+                            'assets/SF-Tower/Salesforse tower_obj.obj',
+                            (obj) => {
+                                console.log("Loaded and placing high-resolution Salesforce Tower within FBX city:", obj);
+
+                                const objBox = new THREE.Box3().setFromObject(obj);
+                                const objSize = new THREE.Vector3();
+                                objBox.getSize(objSize);
+                                const objCenter = new THREE.Vector3();
+                                objBox.getCenter(objCenter);
+
+                                // Scale our high-res OBJ tower to match the FBX tower height and footprint exactly
+                                const scaleX = sfSize.x / objSize.x;
+                                const scaleY = sfSize.y / objSize.y;
+                                const scaleZ = sfSize.z / objSize.z;
+                                obj.scale.set(scaleX * 1.05, scaleY, scaleZ * 1.05); // slightly wider X/Z to clear gaps cleanly
+
+                                // Position precisely over tallestMesh coordinates
+                                obj.position.set(
+                                    sfCenter.x - objCenter.x * (scaleX * 1.05),
+                                    sfBox.min.y - objBox.min.y * scaleY,
+                                    sfCenter.z - objCenter.z * (scaleZ * 1.05)
+                                );
+
+                                // Apply styling to the tower submeshes (glass skin vs structural concrete columns)
+                                obj.traverse((child) => {
+                                    if (child.isMesh) {
+                                        child.castShadow = true;
+                                        child.receiveShadow = true;
+                                        const name = child.name.toLowerCase();
+
+                                        if (name === 'salesforce_02' || name === 'salesforce_13' || name === 'salesforce_03') {
+                                            child.material = screenMaterial;
+                                        } else {
+                                            child.material = concreteMaterial;
+                                        }
+                                    }
+                                });
+
+                                cityHighResTower = obj;
+                                importedGroup.add(obj);
+                                console.log("Successfully placed high-res Salesforce Tower with swarming water skin into FBX city.");
+                            }
                         );
-                        
-                        // Construct the 2D canvas that will render our scrolling screen graphics
-                        const canvas = document.createElement('canvas');
-                        canvas.width = 1024;
-                        canvas.height = 512;
-                        crownScreenCtx = canvas.getContext('2d');
-                        
-                        crownScreenTexture = new THREE.CanvasTexture(canvas);
-                        crownScreenTexture.wrapS = THREE.RepeatWrapping;
-                        crownScreenTexture.wrapT = THREE.RepeatWrapping;
-                        
-                        const screenMaterial = new THREE.MeshBasicMaterial({
-                            map: crownScreenTexture,
-                            side: THREE.DoubleSide
-                        });
-                        
-                        const sfCrownMesh = new THREE.Mesh(crownGeo, screenMaterial);
-                        
-                        // Fit elliptical ratio of Salesforce Tower's footprint exactly
-                        const aspectX = sfSize.x / (radiusBottom * 2);
-                        const aspectZ = sfSize.z / (radiusBottom * 2);
-                        sfCrownMesh.scale.set(aspectX, 1, aspectZ);
-                        
-                        // Position precisely over the top skeletal frames
-                        sfCrownMesh.position.set(
-                            sfCenter.x,
-                            sfBox.max.y - (crownHeight / 2) + 1.5, // tiny offset up
-                            sfCenter.z
-                        );
-                        
-                        importedGroup.add(sfCrownMesh);
-                        console.log("Constructed and positioned solid elliptical digital screen panels on Salesforce Tower.");
                     }
 
                     importedGroup.add(fbx);
@@ -986,7 +1030,7 @@
 
             // Add a beautiful dark showroom reflective circular floor helper
             const floorGeo = new THREE.RingGeometry(0, 350, 64);
-            const floorMat = new THREE.MeshStandardMaterial({
+            floorMat = new THREE.MeshStandardMaterial({
                 color: 0x050a15,
                 roughness: 0.35,
                 metalness: 0.9,
@@ -1047,12 +1091,12 @@
                         crownScreenTexture.wrapT = THREE.RepeatWrapping;
                     }
 
-                    const screenMaterial = new THREE.MeshBasicMaterial({
+                    screenMaterial = new THREE.MeshBasicMaterial({
                         map: crownScreenTexture,
                         side: THREE.DoubleSide
                     });
 
-                    const concreteMaterial = new THREE.MeshStandardMaterial({
+                    concreteMaterial = new THREE.MeshStandardMaterial({
                         color: 0xf1f5f9, // Clean white support columns
                         roughness: 0.5,
                         metalness: 0.15,
@@ -1120,26 +1164,113 @@
 
         // --- 3. UI Controls and Interactions ---
         let currentMode = 'realistic'; // realistic vs wireframe
+
+        // Pre-create specialized wireframe materials for optimal performance
+        const cityWireframeMat = new THREE.MeshBasicMaterial({
+            color: 0x00f2fe,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.15
+        });
+
+        const towerWireframeMat = new THREE.MeshBasicMaterial({
+            color: 0x00ffff,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.35
+        });
         
         document.getElementById('view-toggle').addEventListener('click', () => {
             if (currentMode === 'realistic') {
                 // Switch to Wireframe Mode
-                scene.overrideMaterial = new THREE.MeshBasicMaterial({
-                    color: 0x00f2fe,
-                    wireframe: true,
-                    transparent: true,
-                    opacity: 0.15
-                });
                 scene.background = new THREE.Color(0x020617);
                 scene.fog = new THREE.FogExp2(0x020617, 0.0006);
                 document.getElementById('view-toggle').innerText = 'View Mode: Vector Wireframe';
                 currentMode = 'wireframe';
+
+                // Traverse and apply wireframe to procedural city meshes
+                proceduralGroup.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = cityWireframeMat;
+                    }
+                });
+
+                // Traverse and apply wireframe to CGTrader city (except our high-res tower!)
+                importedGroup.traverse((child) => {
+                    if (child.isMesh) {
+                        const name = child.name ? child.name.toLowerCase() : '';
+                        if (name.includes('salesforce') || name.startsWith('shape') || name.startsWith('line')) {
+                            if (name === 'salesforce_02' || name === 'salesforce_13' || name === 'salesforce_03') {
+                                // Glass skin stays as our gorgeous, glowing, animated, flowing water canvas texture!
+                                child.material = screenMaterial;
+                            } else {
+                                // Concrete columns turn into a brilliant glowing cyan wireframe skeleton!
+                                child.material = towerWireframeMat;
+                            }
+                        } else {
+                            // Rest of the city buildings get clean blue wireframe
+                            child.material = cityWireframeMat;
+                        }
+                    }
+                });
+
+                // Style solo tower group if visible
+                soloTowerGroup.traverse((child) => {
+                    if (child.isMesh) {
+                        const name = child.name ? child.name.toLowerCase() : '';
+                        if (name === 'salesforce_02' || name === 'salesforce_13' || name === 'salesforce_03') {
+                            child.material = screenMaterial;
+                        } else if (name.includes('floor')) {
+                            child.material = floorMat;
+                        } else {
+                            child.material = towerWireframeMat;
+                        }
+                    }
+                });
             } else {
                 // Restore Realistic Mode
-                scene.overrideMaterial = null;
                 document.getElementById('view-toggle').innerText = 'View Mode: Realistic';
                 currentMode = 'realistic';
-                // Sync background and lights back to time-of-day slider
+
+                // Restore original materials
+                // A. Procedural city (perfectly restored from our cached references!)
+                proceduralGroup.traverse((child) => {
+                    if (child.isMesh && child.userData.originalMaterial) {
+                        child.material = child.userData.originalMaterial;
+                    }
+                });
+
+                // B. CGTrader city model
+                importedGroup.traverse((child) => {
+                    if (child.isMesh) {
+                        const name = child.name ? child.name.toLowerCase() : '';
+                        if (name.includes('salesforce') || name.startsWith('shape') || name.startsWith('line')) {
+                            if (name === 'salesforce_02' || name === 'salesforce_13' || name === 'salesforce_03') {
+                                child.material = screenMaterial;
+                            } else {
+                                child.material = concreteMaterial;
+                            }
+                        } else {
+                            child.material = modelMaterial || new THREE.MeshStandardMaterial({ color: 0xe2e8f0 });
+                        }
+                    }
+                });
+
+                // C. Solo Showroom
+                soloTowerGroup.traverse((child) => {
+                    if (child.isMesh) {
+                        const name = child.name ? child.name.toLowerCase() : '';
+                        if (name === 'salesforce_02' || name === 'salesforce_13' || name === 'salesforce_03') {
+                            child.material = screenMaterial;
+                        } else if (name.includes('floor')) {
+                            child.material = floorMat;
+                        } else {
+                            child.material = concreteMaterial;
+                        }
+                    }
+                });
+
+                // Sync lights and background back to time-of-day slider
                 updateTimeOfDay(parseFloat(document.getElementById('time-slider').value));
             }
         });
