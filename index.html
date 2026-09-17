@@ -342,11 +342,11 @@
                 <input type="range" id="anim-height-slider" min="0" max="100" step="1" value="100" class="slider">
             </div>
             <div class="slider-row">
-                <span class="slider-label" style="display: flex; justify-content: space-between;">Animation Opacity <span id="anim-opacity-val" style="color: #00f2fe; font-weight: 600;">100%</span></span>
-                <input type="range" id="anim-opacity-slider" min="0" max="100" step="1" value="100" class="slider">
+                <span class="slider-label" style="display: flex; justify-content: space-between;">Animation See-Through <span id="anim-see-through-val" style="color: #00f2fe; font-weight: 600;">100%</span></span>
+                <input type="range" id="anim-see-through-slider" min="0" max="100" step="1" value="100" class="slider">
             </div>
             <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 8px; line-height: 1.35;">
-                Slide to adjust the vertical animated coverage and transparency (opacity) of the flowing bioluminescent water.
+                Slide to adjust the vertical animated coverage and the see-through transparency (0% is a solid opaque overlay, 100% is highly transparent).
             </div>
         </div>
 
@@ -938,15 +938,15 @@
                             const animVal = animSlider ? parseInt(animSlider.value) : 100;
                             const initialThreshold = 326649.19 * (1.0 - animVal / 100.0);
 
-                            const opacitySlider = document.getElementById('anim-opacity-slider');
-                            const initialOpacity = opacitySlider ? parseFloat(opacitySlider.value) / 100.0 : 1.0;
+                            const seeThroughSlider = document.getElementById('anim-see-through-slider');
+                            const initialSeeThrough = seeThroughSlider ? parseFloat(seeThroughSlider.value) / 100.0 : 1.0;
 
                             screenMaterial = new THREE.ShaderMaterial({
                                 uniforms: {
                                     map: { value: crownScreenTexture },
                                     uAnimHeightThreshold: { value: initialThreshold },
                                     uDarkGlassColor: { value: new THREE.Color(0x0c1322) }, // Deep navy/slate inactive glass color
-                                    uAnimOpacity: { value: initialOpacity }
+                                    uSeeThrough: { value: initialSeeThrough }
                                 },
                                 transparent: true,
                                 vertexShader: `
@@ -962,7 +962,7 @@
                                     uniform sampler2D map;
                                     uniform float uAnimHeightThreshold;
                                     uniform vec3 uDarkGlassColor;
-                                    uniform float uAnimOpacity;
+                                    uniform float uSeeThrough;
                                     varying vec2 vUv;
                                     varying float vLocalY;
                                     void main() {
@@ -976,11 +976,20 @@
                                         } else if (vLocalY < uAnimHeightThreshold) {
                                             float t = smoothstep(uAnimHeightThreshold - transitionWidth, uAnimHeightThreshold, vLocalY);
                                             vec4 animatedColor = texture2D(map, vUv);
-                                            vec4 activeColor = vec4(animatedColor.rgb, uAnimOpacity);
+                                            
+                                            // 0% see-through means fully opaque uDarkGlassColor background under the animation,
+                                            // which fully obscures any underlying structures.
+                                            // 100% see-through lets you see right through the background.
+                                            vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb, animatedColor.a);
+                                            float activeAlpha = mix(1.0, animatedColor.a, uSeeThrough);
+                                            vec4 activeColor = vec4(activeRgb, activeAlpha);
+                                            
                                             gl_FragColor = mix(baseColor, activeColor, t);
                                         } else {
                                             vec4 animatedColor = texture2D(map, vUv);
-                                            gl_FragColor = vec4(animatedColor.rgb, uAnimOpacity);
+                                            vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb, animatedColor.a);
+                                            float activeAlpha = mix(1.0, animatedColor.a, uSeeThrough);
+                                            gl_FragColor = vec4(activeRgb, activeAlpha);
                                         }
                                     }
                                 `,
@@ -1152,15 +1161,15 @@
                     const animVal = animSlider ? parseInt(animSlider.value) : 100;
                     const initialThreshold = 326649.19 * (1.0 - animVal / 100.0);
 
-                    const opacitySlider = document.getElementById('anim-opacity-slider');
-                    const initialOpacity = opacitySlider ? parseFloat(opacitySlider.value) / 100.0 : 1.0;
+                    const seeThroughSlider = document.getElementById('anim-see-through-slider');
+                    const initialSeeThrough = seeThroughSlider ? parseFloat(seeThroughSlider.value) / 100.0 : 1.0;
 
                     screenMaterial = new THREE.ShaderMaterial({
                         uniforms: {
                             map: { value: crownScreenTexture },
                             uAnimHeightThreshold: { value: initialThreshold },
                             uDarkGlassColor: { value: new THREE.Color(0x0c1322) }, // Deep navy/slate inactive glass color
-                            uAnimOpacity: { value: initialOpacity }
+                            uSeeThrough: { value: initialSeeThrough }
                         },
                         transparent: true,
                         vertexShader: `
@@ -1176,7 +1185,7 @@
                             uniform sampler2D map;
                             uniform float uAnimHeightThreshold;
                             uniform vec3 uDarkGlassColor;
-                            uniform float uAnimOpacity;
+                            uniform float uSeeThrough;
                             varying vec2 vUv;
                             varying float vLocalY;
                             void main() {
@@ -1190,11 +1199,20 @@
                                 } else if (vLocalY < uAnimHeightThreshold) {
                                     float t = smoothstep(uAnimHeightThreshold - transitionWidth, uAnimHeightThreshold, vLocalY);
                                     vec4 animatedColor = texture2D(map, vUv);
-                                    vec4 activeColor = vec4(animatedColor.rgb, uAnimOpacity);
+                                    
+                                    // 0% see-through means fully opaque uDarkGlassColor background under the animation,
+                                    // which fully obscures any underlying structures.
+                                    // 100% see-through lets you see right through the background.
+                                    vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb, animatedColor.a);
+                                    float activeAlpha = mix(1.0, animatedColor.a, uSeeThrough);
+                                    vec4 activeColor = vec4(activeRgb, activeAlpha);
+                                    
                                     gl_FragColor = mix(baseColor, activeColor, t);
                                 } else {
                                     vec4 animatedColor = texture2D(map, vUv);
-                                    gl_FragColor = vec4(animatedColor.rgb, uAnimOpacity);
+                                    vec3 activeRgb = mix(uDarkGlassColor, animatedColor.rgb, animatedColor.a);
+                                    float activeAlpha = mix(1.0, animatedColor.a, uSeeThrough);
+                                    gl_FragColor = vec4(activeRgb, activeAlpha);
                                 }
                             }
                         `,
@@ -1797,16 +1815,16 @@
             }
         });
 
-        document.getElementById('anim-opacity-slider').addEventListener('input', (e) => {
+        document.getElementById('anim-see-through-slider').addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
-            document.getElementById('anim-opacity-val').innerText = `${val}%`;
+            document.getElementById('anim-see-through-val').innerText = `${val}%`;
 
-            // Translate percentage (0-100) to alpha coefficient (0.0 to 1.0)
-            const opacity = val / 100.0;
+            // Translate percentage (0-100) to see-through coefficient (0.0 to 1.0)
+            const seeThrough = val / 100.0;
 
             // Update screenMaterial shader uniforms in real-time
-            if (screenMaterial && screenMaterial.uniforms && screenMaterial.uniforms.uAnimOpacity) {
-                screenMaterial.uniforms.uAnimOpacity.value = opacity;
+            if (screenMaterial && screenMaterial.uniforms && screenMaterial.uniforms.uSeeThrough) {
+                screenMaterial.uniforms.uSeeThrough.value = seeThrough;
             }
         });
 
@@ -1870,13 +1888,13 @@
                 }
             }
 
-            const opacitySlider = document.getElementById('anim-opacity-slider');
-            if (opacitySlider) {
-                const opacityVal = (preset.uAnimOpacityVal !== undefined) ? preset.uAnimOpacityVal : 100;
-                opacitySlider.value = opacityVal;
-                document.getElementById('anim-opacity-val').innerText = `${opacityVal}%`;
-                if (screenMaterial && screenMaterial.uniforms && screenMaterial.uniforms.uAnimOpacity) {
-                    screenMaterial.uniforms.uAnimOpacity.value = opacityVal / 100.0;
+            const seeThroughSlider = document.getElementById('anim-see-through-slider');
+            if (seeThroughSlider) {
+                const seeThroughVal = (preset.uSeeThroughVal !== undefined) ? preset.uSeeThroughVal : 100;
+                seeThroughSlider.value = seeThroughVal;
+                document.getElementById('anim-see-through-val').innerText = `${seeThroughVal}%`;
+                if (screenMaterial && screenMaterial.uniforms && screenMaterial.uniforms.uSeeThrough) {
+                    screenMaterial.uniforms.uSeeThrough.value = seeThroughVal / 100.0;
                 }
             }
         }
@@ -1900,7 +1918,7 @@
                 cameraPos: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
                 cameraTar: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
                 uAnimHeightVal: parseInt(document.getElementById('anim-height-slider').value),
-                uAnimOpacityVal: parseInt(document.getElementById('anim-opacity-slider').value)
+                uSeeThroughVal: parseInt(document.getElementById('anim-see-through-slider').value)
             };
 
             const customPresets = JSON.parse(localStorage.getItem('sf_custom_presets') || '[]');
