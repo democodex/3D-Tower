@@ -333,12 +333,16 @@
 
         <div class="control-section">
             <h3>Building Skin (Illuminated Water)</h3>
-            <div class="slider-row">
+            <div class="slider-row" style="margin-bottom: 12px;">
                 <span class="slider-label" style="display: flex; justify-content: space-between;">Water Flow Theme <span id="cone-color-val" style="color: #00f2fe; font-weight: 600;">Cyan</span></span>
                 <input type="range" id="cone-color-slider" min="0" max="360" step="1" value="190" class="slider" style="background: linear-gradient(to right, #ff0000, #ff8800, #ffff00, #00ff00, #00ffff, #0000ff, #8800ff, #ff00ff, #ff0000); height: 8px; border-radius: 4px; outline: none; -webkit-appearance: none;">
             </div>
-            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 6px; line-height: 1.3;">
-                Slide to morph the bioluminescent fluid current hue flowing up the building glass windows in real-time.
+            <div class="slider-row">
+                <span class="slider-label" style="display: flex; justify-content: space-between;">Active Height Coverage <span id="anim-height-val" style="color: #00f2fe; font-weight: 600;">100%</span></span>
+                <input type="range" id="anim-height-slider" min="0" max="100" step="1" value="100" class="slider">
+            </div>
+            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 8px; line-height: 1.35;">
+                Slide to adjust the vertical portion of the building glass window mesh that is animated (moving up from the base of the tower).
             </div>
         </div>
 
@@ -925,8 +929,44 @@
                         }
 
                         if (!screenMaterial) {
-                            screenMaterial = new THREE.MeshBasicMaterial({
-                                map: crownScreenTexture,
+                            const animSlider = document.getElementById('anim-height-slider');
+                            const animVal = animSlider ? parseInt(animSlider.value) : 100;
+                            const initialThreshold = 326649.19 * (1.0 - animVal / 100.0);
+
+                            screenMaterial = new THREE.ShaderMaterial({
+                                uniforms: {
+                                    map: { value: crownScreenTexture },
+                                    uAnimHeightThreshold: { value: initialThreshold },
+                                    uDarkGlassColor: { value: new THREE.Color(0x0c1322) } // Deep navy/slate inactive glass color
+                                },
+                                vertexShader: `
+                                    varying vec2 vUv;
+                                    varying float vLocalY;
+                                    void main() {
+                                        vUv = uv;
+                                        vLocalY = position.y;
+                                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                                    }
+                                `,
+                                fragmentShader: `
+                                    uniform sampler2D map;
+                                    uniform float uAnimHeightThreshold;
+                                    uniform vec3 uDarkGlassColor;
+                                    varying vec2 vUv;
+                                    varying float vLocalY;
+                                    void main() {
+                                        float transitionWidth = 8000.0; // Smooth blend threshold
+                                        if (vLocalY < uAnimHeightThreshold - transitionWidth) {
+                                            gl_FragColor = vec4(uDarkGlassColor, 1.0);
+                                        } else if (vLocalY < uAnimHeightThreshold) {
+                                            float t = smoothstep(uAnimHeightThreshold - transitionWidth, uAnimHeightThreshold, vLocalY);
+                                            vec4 animatedColor = texture2D(map, vUv);
+                                            gl_FragColor = mix(vec4(uDarkGlassColor, 1.0), animatedColor, t);
+                                        } else {
+                                            gl_FragColor = texture2D(map, vUv);
+                                        }
+                                    }
+                                `,
                                 side: THREE.DoubleSide
                             });
                         }
@@ -1091,8 +1131,44 @@
                         crownScreenTexture.wrapT = THREE.RepeatWrapping;
                     }
 
-                    screenMaterial = new THREE.MeshBasicMaterial({
-                        map: crownScreenTexture,
+                    const animSlider = document.getElementById('anim-height-slider');
+                    const animVal = animSlider ? parseInt(animSlider.value) : 100;
+                    const initialThreshold = 326649.19 * (1.0 - animVal / 100.0);
+
+                    screenMaterial = new THREE.ShaderMaterial({
+                        uniforms: {
+                            map: { value: crownScreenTexture },
+                            uAnimHeightThreshold: { value: initialThreshold },
+                            uDarkGlassColor: { value: new THREE.Color(0x0c1322) } // Deep navy/slate inactive glass color
+                        },
+                        vertexShader: `
+                            varying vec2 vUv;
+                            varying float vLocalY;
+                            void main() {
+                                vUv = uv;
+                                vLocalY = position.y;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
+                        fragmentShader: `
+                            uniform sampler2D map;
+                            uniform float uAnimHeightThreshold;
+                            uniform vec3 uDarkGlassColor;
+                            varying vec2 vUv;
+                            varying float vLocalY;
+                            void main() {
+                                float transitionWidth = 8000.0; // Smooth blend threshold
+                                if (vLocalY < uAnimHeightThreshold - transitionWidth) {
+                                    gl_FragColor = vec4(uDarkGlassColor, 1.0);
+                                } else if (vLocalY < uAnimHeightThreshold) {
+                                    float t = smoothstep(uAnimHeightThreshold - transitionWidth, uAnimHeightThreshold, vLocalY);
+                                    vec4 animatedColor = texture2D(map, vUv);
+                                    gl_FragColor = mix(vec4(uDarkGlassColor, 1.0), animatedColor, t);
+                                } else {
+                                    gl_FragColor = texture2D(map, vUv);
+                                }
+                            }
+                        `,
                         side: THREE.DoubleSide
                     });
 
@@ -1667,6 +1743,19 @@
             else label = "Red";
             
             document.getElementById('cone-color-val').innerText = `${label} (${val}°)`;
+        });
+
+        document.getElementById('anim-height-slider').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('anim-height-val').innerText = `${val}%`;
+
+            // Calculate local Y threshold based on Salesforce OBJ local Y range (0 to 326649.19)
+            const threshold = 326649.19 * (1.0 - val / 100.0);
+
+            // Update screenMaterial shader uniforms in real-time
+            if (screenMaterial && screenMaterial.uniforms && screenMaterial.uniforms.uAnimHeightThreshold) {
+                screenMaterial.uniforms.uAnimHeightThreshold.value = threshold;
+            }
         });
 
         // --- Presets Manager ---
