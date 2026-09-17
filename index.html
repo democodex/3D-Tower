@@ -378,6 +378,7 @@
                     <option value="default_noon">Noon (12:54 PM) [Default]</option>
                     <option value="default_morning">Morning (9:45 AM)</option>
                     <option value="default_sunset">Sunset (6:30 PM)</option>
+                    <option value="default_night">Night Animation (9:00 PM)</option>
                 </select>
                 <button id="save-preset-btn" class="nav-btn" style="padding: 3px 6px; font-size: 0.65rem;" title="Save current parameters to a custom preset">+ Save</button>
             </div>
@@ -1216,9 +1217,14 @@
                     importedGroup.visible = false;
                     soloTowerGroup.visible = true;
 
-                    camera.position.set(0, 220, 480);
-                    controls.target.set(0, 150, 0);
-                    controls.update();
+                    // Automatically apply the "Night Animation" default preset
+                    if (presets && presets.default_night) {
+                        applyPreset(presets.default_night);
+                    } else {
+                        camera.position.set(0, 220, 480);
+                        controls.target.set(0, 150, 0);
+                        controls.update();
+                    }
 
                     document.getElementById('loading').innerText = 'Salesforce Tower Active';
                     document.getElementById('loading').style.color = '#00f2fe';
@@ -1433,9 +1439,14 @@
                     loadSoloTowerModel();
                 } else {
                     document.getElementById('loading').innerText = 'Salesforce Tower Active';
-                    camera.position.set(0, 220, 480);
-                    controls.target.set(0, 150, 0);
-                    controls.update();
+                    // Automatically apply the "Night Animation" default preset when clicking the source button!
+                    if (presets && presets.default_night) {
+                        applyPreset(presets.default_night);
+                    } else {
+                        camera.position.set(0, 220, 480);
+                        controls.target.set(0, 150, 0);
+                        controls.update();
+                    }
                 }
             }
         }
@@ -1780,6 +1791,13 @@
                 shadow: 1.8,
                 cameraPos: { x: 1300, y: 320, z: 1300 },
                 cameraTar: { x: 0, y: 0, z: 0 }
+            },
+            default_night: {
+                time: 21.0, // 9:00 PM (Pitch-black background, bioluminescent glow active)
+                brightness: 1.1,
+                shadow: 1.5,
+                cameraPos: { x: 0, y: 220, z: 480 },
+                cameraTar: { x: 0, y: 150, z: 0 }
             }
         };
 
