@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D San Francisco Skyline - Three.js</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050811;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e2e8f0;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: transparent;
+            padding: 0;
+            border: none;
+            backdrop-filter: none;
+            max-width: 260px;
+            box-shadow: none;
+        }
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(45deg, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p {
+            margin: 0 0 16px 0;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            color: #94a3b8;
+        }
+        .btn {
+            display: inline-block;
+            width: 100%;
+            background: linear-gradient(135deg, #00b4db, #0083b0);
+            color: white;
+            border: none;
+            padding: 7px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-align: center;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            margin-bottom: 6px;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(0, 180, 219, 0.3);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: none;
+            transform: none;
+        }
+        .instructions {
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid #00f2fe;
+            padding: 10px;
+            margin-top: 15px;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+        }
+        .instructions ol {
+            margin: 5px 0 0 0;
+            padding-left: 15px;
+        }
+        .instructions li {
+            margin-bottom: 4px;
+        }
+        #loading {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(11, 15, 30, 0.55);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.7rem;
+            color: #00f2fe;
+            font-weight: 600;
+            border: 1px solid rgba(0, 242, 254, 0.12);
+            pointer-events: none;
+        }
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10;
+            font-size: 0.75rem;
+            color: #64748b;
+            pointer-events: none;
+        }
+        #debug-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(15, 10, 10, 0.9);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            max-width: 400px;
+            max-height: 250px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+        #controls-panel-right {
+            position: absolute;
+            bottom: 35px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(11, 15, 30, 0.55);
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            backdrop-filter: blur(8px);
+            width: 220px;
+            box-shadow: none;
+            box-sizing: border-box;
+        }
+        .control-section {
+            margin-bottom: 14px;
+        }
+        .control-section:last-child {
+            margin-bottom: 0;
+        }
+        .control-section h3 {
+            margin: 0 0 8px 0;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 4px;
+        }
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.12);
+            outline: none;
+            margin: 8px 0;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #00f2fe;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+            transition: transform 0.1s;
+        }
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        .slider-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .slider-label {
+            font-size: 0.72rem;
+            color: #94a3b8;
+        }
+        .slider-row .slider {
+            width: 105px;
+            margin: 0;
+        }
+        
+        /* Navigation Compass Grid */
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 4px;
+            width: 105px;
+            margin: 0 auto 10px auto;
+        }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+            padding: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        .nav-btn:hover {
+            background: #00f2fe;
+            color: #050811;
+            box-shadow: 0 0 8px rgba(0, 242, 254, 0.4);
+        }
+        .reset-btn {
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        .zoom-row {
+            display: flex;
+            grid-gap: 6px;
+        }
+        .zoom-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+            padding: 6px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.72rem;
+            font-weight: 600;
+            transition: all 0.15s;
+        }
+        .zoom-btn:hover {
+            background: linear-gradient(135deg, #00b4db, #0083b0);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 10px rgba(0, 180, 219, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Inline error logger to catch and display any CORS or loading failures right on screen -->
+    <div id="debug-panel"></div>
+    <script>
+        const debugPanel = document.getElementById('debug-panel');
+        function showError(message) {
+            debugPanel.style.display = 'block';
+            debugPanel.innerHTML += '<div>❌ ' + message + '</div>';
+            debugPanel.scrollTop = debugPanel.scrollHeight;
+        }
+        window.onerror = function(message, source, lineno, colno, error) {
+            const filename = source ? source.split('/').pop() : '';
+            showError(message + (filename ? ' (' + filename + ':' + lineno + ')' : ''));
+            return false;
+        };
+        console.error = (function(oldError) {
+            return function(...args) {
+                oldError.apply(console, args);
+                showError(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
+            }
+        })(console.error);
+
+        // Detect if opened via file:// protocol and show a clear warning
+        if (window.location.protocol === 'file:') {
+            setTimeout(() => {
+                showError("CORS BLOCKED: You opened this page via file:// protocol directly from your disk! Browsers block importing ES modules and loading 3D assets on file:// due to security restrictions. You MUST use a local server. Please open http://localhost:8000 instead!");
+            }, 500);
+        }
+    </script>
+
+    <div id="canvas-container"></div>
+
+    <div id="sketchfab-container" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;">
+        <iframe title="San Francisco,city,scan,map,skyscraper,terrain" src="https://sketchfab.com/models/a55c4f6547a447038691e20b45c95a8e/embed?autostart=1&internal=1&ui_controls=1&ui_infos=0&ui_watermark=0" frameborder="0" allowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" style="width: 100%; height: 100%; border: none;"></iframe>
+    </div>
+
+    <div id="ui-container">
+        <h1>San Francisco</h1>
+        
+        <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; margin-bottom: 5px; letter-spacing: 0.05em;">ACTIVE 3D SOURCE</div>
+        <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px;">
+            <button id="source-cgtrader" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; text-align: left; background: linear-gradient(135deg, #00b4db, #0083b0); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; outline: none;">🏙️ CGTrader (High-Res 3D)</button>
+            <button id="source-sketchfab" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; outline: none;">📸 Sketchfab (Photoreal Scan)</button>
+            <button id="source-procedural" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; outline: none;">⚙️ Procedural (Three.js)</button>
+            <button id="source-solo-tower" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; outline: none;">🗼 Salesforce Tower (Solo)</button>
+        </div>
+
+        <button id="view-toggle" class="btn" style="padding: 6px 10px; font-size: 0.75rem; margin-top: 4px;">View Mode: Realistic</button>
+    </div>
+
+    <!-- Sunrise/Sunset, Contrast, and Camera XYZ controls -->
+    <div id="controls-panel-right">
+        <div class="control-section">
+            <h3>Time of Day (<span id="time-val" style="color: #00f2fe;">12.9</span>)</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span id="time-display" style="font-size: 0.72rem; color: #38bdf8; font-weight: 600;">12:54 PM (Day)</span>
+            </div>
+            <input type="range" id="time-slider" min="0" max="24" step="0.1" value="12.9" class="slider">
+        </div>
+
+        <div class="control-section">
+            <h3>Lighting & Contrast</h3>
+            <div class="slider-row">
+                <span class="slider-label">Brightness (<span id="brightness-val" style="color: #00f2fe;">1.20</span>)</span>
+                <input type="range" id="brightness-slider" min="0.2" max="3.0" step="0.05" value="1.2" class="slider">
+            </div>
+            <div class="slider-row">
+                <span class="slider-label">Sun Contrast (<span id="shadow-val" style="color: #00f2fe;">1.50</span>)</span>
+                <input type="range" id="shadow-slider" min="0.0" max="4.0" step="0.05" value="1.5" class="slider">
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3>Building Skin (Illuminated Water)</h3>
+            <div class="slider-row">
+                <span class="slider-label" style="display: flex; justify-content: space-between;">Water Flow Theme <span id="cone-color-val" style="color: #00f2fe; font-weight: 600;">Cyan</span></span>
+                <input type="range" id="cone-color-slider" min="0" max="360" step="1" value="190" class="slider" style="background: linear-gradient(to right, #ff0000, #ff8800, #ffff00, #00ff00, #00ffff, #0000ff, #8800ff, #ff00ff, #ff0000); height: 8px; border-radius: 4px; outline: none; -webkit-appearance: none;">
+            </div>
+            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 6px; line-height: 1.3;">
+                Slide to morph the bioluminescent fluid current hue flowing up the building glass windows in real-time.
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3>Camera Control</h3>
+            <div class="nav-grid">
+                <div></div>
+                <button id="nav-up" class="nav-btn" title="Pan Up">▲</button>
+                <div></div>
+                <button id="nav-left" class="nav-btn" title="Pan Left">◀</button>
+                <button id="nav-reset" class="nav-btn reset-btn" title="Reset View">⟲</button>
+                <button id="nav-right" class="nav-btn" title="Pan Right">▶</button>
+                <div></div>
+                <button id="nav-down" class="nav-btn" title="Pan Down">▼</button>
+                <div></div>
+            </div>
+            <div class="zoom-row" style="margin-bottom: 6px;">
+                <button id="zoom-in" class="zoom-btn" title="Zoom In">Zoom In (+)</button>
+                <button id="zoom-out" class="zoom-btn" title="Zoom Out">Zoom Out (-)</button>
+            </div>
+            
+            <div style="font-family: monospace; font-size: 0.62rem; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px; line-height: 1.35;">
+                Cam Pos: <span id="cam-val" style="color: #38bdf8; font-weight: 600;">(1200, 350, 1200)</span><br>
+                Cam Tar: <span id="tar-val" style="color: #38bdf8; font-weight: 600;">(0, 0, 0)</span>
+            </div>
+        </div>
+
+        <div class="control-section" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; margin-top: 10px;">
+            <h3>Presets</h3>
+            <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+                <select id="preset-select" style="flex: 1; background: rgba(11,15,30,0.8); border: 1px solid rgba(255,255,255,0.12); color: #e2e8f0; font-size: 0.7rem; padding: 4px; border-radius: 4px; outline: none; cursor: pointer;">
+                    <option value="">-- Choose Preset --</option>
+                    <option value="default_noon">Noon (12:54 PM) [Default]</option>
+                    <option value="default_morning">Morning (9:45 AM)</option>
+                    <option value="default_sunset">Sunset (6:30 PM)</option>
+                </select>
+                <button id="save-preset-btn" class="nav-btn" style="padding: 3px 6px; font-size: 0.65rem;" title="Save current parameters to a custom preset">+ Save</button>
+            </div>
+            <div id="custom-presets-list" style="display: flex; flex-direction: column; gap: 4px; max-height: 80px; overflow-y: auto; padding-right: 2px;"></div>
+        </div>
+    </div>
+
+    <div id="loading">Three.js Scene Active</div>
+    <div id="legend">Left Click + Drag to Rotate | Right Click + Drag to Pan | Scroll to Zoom</div>
+
+    <!-- Import maps polyfill -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "fflate": "https://unpkg.com/fflate@0.8.1/lib/esm/index.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+        import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+        // --- Scene & Renderer Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        
+        // Dark cosmic background with atmospheric fog
+        scene.background = new THREE.Color(0x050811);
+        scene.fog = new THREE.FogExp2(0x050811, 0.0007);
+
+        // Perspective Camera
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 10000);
+        camera.position.set(1200, 350, 1200);
+
+        // Salesforce Crown Digital Screens dynamic globals
+        let crownScreenCtx = null;
+        let crownScreenTexture = null;
+        
+        let swarmParticles = [];
+        const shapes = ['triangle', 'square', 'circle', 'hexagon'];
+        for (let i = 0; i < 55; i++) {
+            swarmParticles.push({
+                x: Math.random() * 1024,
+                y: Math.random() * 512,
+                vx: (Math.random() - 0.5) * 1.8,
+                vy: (Math.random() - 0.5) * 1.2,
+                size: 7 + Math.random() * 12,
+                shape: shapes[Math.floor(Math.random() * shapes.length)],
+                angle: Math.random() * Math.PI * 2,
+                spin: (Math.random() - 0.5) * 0.04,
+                speed: 1.2 + Math.random() * 1.8,
+                alpha: 0.35 + Math.random() * 0.55
+            });
+        }
+
+        // WebGL Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        container.appendChild(renderer.domElement);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02; // Prevent camera going under water
+        controls.minDistance = 200;
+        controls.maxDistance = 4000;
+        controls.target.set(0, 0, 0);
+        controls.zoomSpeed = 2.5;
+
+        // --- Lights ---
+        const ambientLight = new THREE.AmbientLight(0x1a2636, 0.8);
+        scene.add(ambientLight);
+
+        // Directional Sun/Moon light casting soft shadows
+        const dirLight = new THREE.DirectionalLight(0xa5b4fc, 1.5);
+        dirLight.position.set(1500, 1000, 1000);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 100;
+        dirLight.shadow.camera.far = 5000;
+        const d = 1500;
+        dirLight.shadow.camera.left = -d;
+        dirLight.shadow.camera.right = d;
+        dirLight.shadow.camera.top = d;
+        dirLight.shadow.camera.bottom = -d;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        // Soft orange horizon dome light to simulate city glow
+        const hemiLight = new THREE.HemisphereLight(0x050811, 0x111827, 0.4);
+        scene.add(hemiLight);
+
+        // --- Material Library ---
+        const colors = {
+            bayWater: 0x0a1424,
+            concrete: 0x1e293b,
+            glass: 0x38bdf8,
+            salesforce: 0x0ea5e9,
+            transamerica: 0xf1f5f9,
+            ferry: 0x94a3b8,
+            windows: [0xfef08a, 0x38bdf8, 0x06b6d4, 0xff007f],
+            bridge: 0xe11d48, // International Orange
+            streetLight: 0xfef08a
+        };
+
+        const materials = {
+            water: new THREE.MeshStandardMaterial({
+                color: colors.bayWater,
+                roughness: 0.15,
+                metalness: 0.8
+            }),
+            buildingClassic: new THREE.MeshStandardMaterial({
+                color: colors.concrete,
+                roughness: 0.7,
+                metalness: 0.2
+            }),
+            buildingGlass: new THREE.MeshStandardMaterial({
+                color: colors.glass,
+                roughness: 0.1,
+                metalness: 0.9,
+                transparent: true,
+                opacity: 0.85
+            }),
+            salesforce: new THREE.MeshStandardMaterial({
+                color: 0x1e293b,
+                roughness: 0.2,
+                metalness: 0.8
+            }),
+            transamerica: new THREE.MeshStandardMaterial({
+                color: colors.transamerica,
+                roughness: 0.6,
+                metalness: 0.1
+            }),
+            ferry: new THREE.MeshStandardMaterial({
+                color: colors.ferry,
+                roughness: 0.8,
+                metalness: 0.1
+            }),
+            bridge: new THREE.MeshStandardMaterial({
+                color: colors.bridge,
+                roughness: 0.5,
+                metalness: 0.5
+            }),
+            street: new THREE.MeshStandardMaterial({
+                color: 0x090d16,
+                roughness: 0.9,
+                metalness: 0.1
+            })
+        };
+
+        // --- Groups ---
+        const proceduralGroup = new THREE.Group();
+        scene.add(proceduralGroup);
+
+        const importedGroup = new THREE.Group();
+        scene.add(importedGroup);
+
+        const soloTowerGroup = new THREE.Group();
+        scene.add(soloTowerGroup);
+
+        // --- 1. Procedural SF Generation ---
+        
+        // A. Bay Water Plane
+        const waterGeo = new THREE.PlaneGeometry(8000, 8000);
+        const water = new THREE.Mesh(waterGeo, materials.water);
+        water.rotation.x = -Math.PI / 2;
+        water.receiveShadow = true;
+        proceduralGroup.add(water);
+
+        // B. Ground / Terrain (Downtown Grid)
+        const landGeo = new THREE.BoxGeometry(2000, 10, 2000);
+        const land = new THREE.Mesh(landGeo, materials.buildingClassic);
+        land.position.set(0, -4, 200); // Shifted south-west relative to bay
+        land.receiveShadow = true;
+        proceduralGroup.add(land);
+
+        // C. Street Grid and Flowing Traffic
+        const trafficLines = [];
+        const streetCount = 10;
+        const streetGroup = new THREE.Group();
+        proceduralGroup.add(streetGroup);
+
+        for (let i = 0; i < streetCount; i++) {
+            // East-West Streets
+            const xStreetGeo = new THREE.PlaneGeometry(2000, 16);
+            const xStreet = new THREE.Mesh(xStreetGeo, materials.street);
+            xStreet.rotation.x = -Math.PI / 2;
+            xStreet.position.set(0, 1.2, -800 + i * 220);
+            xStreet.receiveShadow = true;
+            streetGroup.add(xStreet);
+
+            // North-South Streets
+            const zStreetGeo = new THREE.PlaneGeometry(16, 2000);
+            const zStreet = new THREE.Mesh(zStreetGeo, materials.street);
+            zStreet.rotation.x = -Math.PI / 2;
+            zStreet.position.set(-800 + i * 220, 1.2, 200);
+            zStreet.receiveShadow = true;
+            streetGroup.add(zStreet);
+
+            // Create flowing traffic particles
+            createTrafficFlow(0, -800 + i * 220, true);
+            createTrafficFlow(-800 + i * 220, 200, false);
+        }
+
+        function createTrafficFlow(constCoord, activeRange, isEastWest) {
+            const particleCount = 15;
+            const geo = new THREE.BufferGeometry();
+            const positions = [];
+            const speeds = [];
+            const colorsArray = [];
+
+            for (let i = 0; i < particleCount; i++) {
+                const startPos = (Math.random() - 0.5) * 2000;
+                positions.push(
+                    isEastWest ? startPos : constCoord + (Math.random() - 0.5) * 10,
+                    4,
+                    isEastWest ? constCoord + (Math.random() - 0.5) * 10 : startPos
+                );
+                speeds.push((0.5 + Math.random() * 1.5) * (Math.random() > 0.5 ? 1 : -1));
+                
+                // Headlights (yellow-white) vs Taillights (red)
+                if (Math.random() > 0.4) {
+                    colorsArray.push(1, 0.9, 0.6); // Yellow/white
+                } else {
+                    colorsArray.push(0.9, 0.1, 0.1); // Red
+                }
+            }
+
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geo.setAttribute('color', new THREE.Float32BufferAttribute(colorsArray, 3));
+
+            const mat = new THREE.PointsMaterial({
+                size: 6,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending
+            });
+
+            const points = new THREE.Points(geo, mat);
+            streetGroup.add(points);
+            trafficLines.push({ points, speeds, isEastWest });
+        }
+
+        // D. SF Landmarks (Procedural Recreations)
+
+        // 1. Salesforce Tower
+        const salesforceGroup = new THREE.Group();
+        salesforceGroup.position.set(100, 0, 150);
+        proceduralGroup.add(salesforceGroup);
+
+        const sfHeight = 440;
+        const sfRadius = 45;
+        
+        // Tower Body
+        const sfGeo = new THREE.CylinderGeometry(sfRadius * 0.6, sfRadius, sfHeight, 16, 20);
+        // Slightly deform cylinder to make it curved/elliptical
+        sfGeo.scale(1.2, 1, 0.8);
+        const sfBody = new THREE.Mesh(sfGeo, materials.salesforce);
+        sfBody.position.y = sfHeight / 2;
+        sfBody.castShadow = true;
+        sfBody.receiveShadow = true;
+        salesforceGroup.add(sfBody);
+
+        // Glowing Crown Sphere
+        const sfCrownGeo = new THREE.SphereGeometry(sfRadius * 0.59, 16, 16);
+        const sfCrownMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
+        const sfCrown = new THREE.Mesh(sfCrownGeo, sfCrownMat);
+        sfCrown.position.y = sfHeight - 5;
+        sfCrown.scale.set(1.2, 0.8, 0.8);
+        salesforceGroup.add(sfCrown);
+
+        // Salesforce Glowing top light source
+        const sfTopLight = new THREE.PointLight(0x00f2fe, 3, 400);
+        sfTopLight.position.set(100, sfHeight + 10, 150);
+        proceduralGroup.add(sfTopLight);
+
+        // 2. Transamerica Pyramid
+        const pyrGroup = new THREE.Group();
+        pyrGroup.position.set(-250, 0, -50);
+        proceduralGroup.add(pyrGroup);
+
+        const pyrHeight = 360;
+        const pyrWidth = 60;
+        // Cone geometry with 4 segments creates a pyramid
+        const pyrGeo = new THREE.ConeGeometry(pyrWidth, pyrHeight, 4);
+        const pyr = new THREE.Mesh(pyrGeo, materials.transamerica);
+        pyr.position.y = pyrHeight / 2;
+        pyr.rotation.y = Math.PI / 4; // Align sides with grid
+        pyr.castShadow = true;
+        pyr.receiveShadow = true;
+        pyrGroup.add(pyr);
+
+        // Pyramid structural wings
+        const wingMat = materials.transamerica;
+        const wing1Geo = new THREE.BoxGeometry(6, pyrHeight * 0.6, 18);
+        const wing1 = new THREE.Mesh(wing1Geo, wingMat);
+        wing1.position.set(0, pyrHeight * 0.3, pyrWidth * 0.4);
+        wing1.castShadow = true;
+        pyrGroup.add(wing1);
+
+        const wing2 = wing1.clone();
+        wing2.position.set(0, pyrHeight * 0.3, -pyrWidth * 0.4);
+        pyrGroup.add(wing2);
+
+        // 3. Ferry Building (By the Waterfront)
+        const ferryGroup = new THREE.Group();
+        ferryGroup.position.set(380, 0, -250);
+        proceduralGroup.add(ferryGroup);
+
+        // Base Hall
+        const fbBaseGeo = new THREE.BoxGeometry(320, 35, 60);
+        const fbBase = new THREE.Mesh(fbBaseGeo, materials.ferry);
+        fbBase.position.y = 17.5;
+        fbBase.castShadow = true;
+        fbBase.receiveShadow = true;
+        ferryGroup.add(fbBase);
+
+        // Clock Tower
+        const fbTowerGeo = new THREE.BoxGeometry(35, 120, 35);
+        const fbTower = new THREE.Mesh(fbTowerGeo, materials.ferry);
+        fbTower.position.set(0, 60, 0);
+        fbTower.castShadow = true;
+        ferryGroup.add(fbTower);
+
+        // Spire
+        const fbSpireGeo = new THREE.ConeGeometry(8, 40, 4);
+        const fbSpire = new THREE.Mesh(fbSpireGeo, materials.transamerica);
+        fbSpire.position.set(0, 140, 0);
+        ferryGroup.add(fbSpire);
+
+        // E. Skyline Blocks (Surrounding Office & Residential Towers)
+        const buildingInstances = [];
+        const gridSpacing = 160;
+        const blockRange = 6;
+
+        for (let x = -blockRange; x <= blockRange; x++) {
+            for (let z = -blockRange; z <= blockRange; z++) {
+                // Skip locations too close to landmarks or off the grid
+                const distToSF = Math.sqrt(Math.pow(x * gridSpacing - 100, 2) + Math.pow(z * gridSpacing - 150, 2));
+                const distToPyr = Math.sqrt(Math.pow(x * gridSpacing + 250, 2) + Math.pow(z * gridSpacing + 50, 2));
+                const distToFerry = Math.sqrt(Math.pow(x * gridSpacing - 380, 2) + Math.pow(z * gridSpacing + 250, 2));
+                
+                if (distToSF < 180 || distToPyr < 150 || distToFerry < 220) continue;
+                if (x * gridSpacing > 800 || z * gridSpacing > 800 || z * gridSpacing < -800) continue;
+
+                // Random height with taller buildings toward Financial District center
+                const distanceCenter = Math.sqrt(x*x + z*z);
+                const maxH = Math.max(100, 320 - distanceCenter * 40);
+                const height = 80 + Math.random() * maxH;
+                const width = 45 + Math.random() * 30;
+                const depth = 45 + Math.random() * 30;
+
+                const bGroup = new THREE.Group();
+                bGroup.position.set(x * gridSpacing + (Math.random() - 0.5) * 30, 0, z * gridSpacing + (Math.random() - 0.5) * 30);
+                proceduralGroup.add(bGroup);
+
+                // Building geometry
+                const bGeo = new THREE.BoxGeometry(width, height, depth);
+                const isGlass = Math.random() > 0.4;
+                const bMat = isGlass ? materials.buildingGlass : materials.buildingClassic;
+                
+                const mesh = new THREE.Mesh(bGeo, bMat);
+                mesh.position.y = height / 2;
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                bGroup.add(mesh);
+
+                // Add Windows (emissive boxes or instanced point lighting features)
+                addBuildingWindows(bGroup, width, height, depth, isGlass);
+            }
+        }
+
+        function addBuildingWindows(bGroup, w, h, d, isGlass) {
+            // Procedurally populate window arrays
+            const windowMat = new THREE.MeshBasicMaterial({
+                color: colors.windows[Math.floor(Math.random() * colors.windows.length)]
+            });
+
+            const rows = Math.floor(h / 15);
+            const cols = Math.floor(w / 12);
+            
+            if (rows < 2 || cols < 2) return;
+
+            const instancedWindows = [];
+            const winSize = 2.2;
+
+            const winGeo = new THREE.BoxGeometry(winSize, winSize, 0.5);
+
+            // We place windows on front & back faces
+            for (let r = 1; r < rows; r++) {
+                const yPos = r * 15;
+                if (Math.random() > 0.15) { // Skip random floors for realism (unoccupied/dark offices)
+                    for (let c = 1; c < cols; c++) {
+                        if (Math.random() > 0.3) {
+                            const xPos = -w/2 + (c * (w / cols));
+                            
+                            // Front face
+                            const winF = new THREE.Mesh(winGeo, windowMat);
+                            winF.position.set(xPos, yPos, d/2 + 0.3);
+                            bGroup.add(winF);
+
+                            // Back face
+                            const winB = new THREE.Mesh(winGeo, windowMat);
+                            winB.position.set(xPos, yPos, -d/2 - 0.3);
+                            bGroup.add(winB);
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- 2. CGTrader Model Loader (Ready to Load once downloaded) ---
+        let cgtraderModelLoaded = false;
+        const cgtraderPath = './assets/San-Francisco.fbx';
+
+        function loadCGTraderModel() {
+            document.getElementById('loading').innerText = 'Loading CGTrader Model...';
+            document.getElementById('loading').style.color = '#f59e0b';
+            document.getElementById('loading').style.borderColor = 'rgba(245, 158, 11, 0.2)';
+
+            const loader = new FBXLoader();
+            loader.load(
+                cgtraderPath,
+                (fbx) => {
+                    // Force complete world matrices update before box calculation to prevent identity offsets
+                    fbx.updateMatrixWorld(true);
+
+                    // Auto-Scale the model to fit a standard bounding size (e.g., 1200 units max)
+                    const box = new THREE.Box3().setFromObject(fbx);
+                    const size = new THREE.Vector3();
+                    box.getSize(size);
+                    const center = new THREE.Vector3();
+                    box.getCenter(center);
+
+                    console.log("Loaded model original bounds:", { size, center });
+
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    if (maxDim > 0) {
+                        const targetScale = 1200 / maxDim;
+                        fbx.scale.set(targetScale, targetScale, targetScale);
+                        
+                        // Force update matrices after scaling
+                        fbx.updateMatrixWorld(true);
+
+                        // Re-compute bounding box of scaled object to perfectly align position
+                        const scaledBox = new THREE.Box3().setFromObject(fbx);
+                        const scaledCenter = new THREE.Vector3();
+                        scaledBox.getCenter(scaledCenter);
+                        
+                        // Center horizontally on X & Z, and rest the bottom (min Y) on the ground (Y = 0)
+                        fbx.position.x = -scaledCenter.x;
+                        fbx.position.z = -scaledCenter.z;
+                        fbx.position.y = -scaledBox.min.y;
+
+                        console.log("Scaled and centered model. New scale:", targetScale, "Position:", fbx.position);
+                    }
+
+                    // A gorgeous, highly-reflective bright concrete clay material that shows all architectural contours and details
+                    const modelMaterial = new THREE.MeshStandardMaterial({
+                        color: 0xe2e8f0, // Clean, bright white-grey concrete color
+                        roughness: 0.65,
+                        metalness: 0.15,
+                        flatShading: true,
+                        side: THREE.DoubleSide, // Fixes single-sided/flipped CAD normals
+                        shadowSide: THREE.DoubleSide
+                    });
+
+                    // 1. Identify the Salesforce Tower (the tallest building structure, skipping flat terrain/ocean planes)
+                    let tallestMesh = null;
+                    let maxMeshHeight = 0;
+                    
+                    fbx.traverse((child) => {
+                        if (child.isMesh) {
+                            const meshBox = new THREE.Box3().setFromObject(child);
+                            const meshSize = new THREE.Vector3();
+                            meshBox.getSize(meshSize);
+                            
+                            // Skyscraper filter: A tower is narrow vertically compared to huge flat meshes like oceans or terrains.
+                            // We only consider objects that have narrow footprints (X and Z widths under 150 units).
+                            if (meshSize.x < 150 && meshSize.z < 150) {
+                                if (meshSize.y > maxMeshHeight) {
+                                    maxMeshHeight = meshSize.y;
+                                    tallestMesh = child;
+                                }
+                            }
+                        }
+                    });
+
+                    console.log("Identified tallest building mesh:", tallestMesh ? tallestMesh.name : "none", "Height:", maxMeshHeight);
+
+                    // 2. Traverse and apply the bright concrete clay material to all meshes
+                    fbx.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            child.material = modelMaterial;
+                        }
+                    });
+
+                    // 3. Create and append a solid, elliptical crown mesh that covers the skeletal peak with animated screen panels
+                    if (tallestMesh) {
+                        const sfBox = new THREE.Box3().setFromObject(tallestMesh);
+                        const sfSize = new THREE.Vector3();
+                        sfBox.getSize(sfSize);
+                        const sfCenter = new THREE.Vector3();
+                        sfBox.getCenter(sfCenter);
+                        
+                        // We construct the solid screen panels crown matching the top 13% height of Salesforce Tower
+                        const crownHeight = sfSize.y * 0.125;
+                        const radiusBottom = Math.max(sfSize.x, sfSize.z) * 0.44;
+                        const radiusTop = radiusBottom * 0.38;
+                        
+                        const crownGeo = new THREE.CylinderGeometry(
+                            radiusTop,      // tapered top
+                            radiusBottom,   // bottom radius
+                            crownHeight,    // height
+                            32,             // radial segments
+                            1,              // height segments
+                            false           // openEnded
+                        );
+                        
+                        // Construct the 2D canvas that will render our scrolling screen graphics
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 1024;
+                        canvas.height = 512;
+                        crownScreenCtx = canvas.getContext('2d');
+                        
+                        crownScreenTexture = new THREE.CanvasTexture(canvas);
+                        crownScreenTexture.wrapS = THREE.RepeatWrapping;
+                        crownScreenTexture.wrapT = THREE.RepeatWrapping;
+                        
+                        const screenMaterial = new THREE.MeshBasicMaterial({
+                            map: crownScreenTexture,
+                            side: THREE.DoubleSide
+                        });
+                        
+                        const sfCrownMesh = new THREE.Mesh(crownGeo, screenMaterial);
+                        
+                        // Fit elliptical ratio of Salesforce Tower's footprint exactly
+                        const aspectX = sfSize.x / (radiusBottom * 2);
+                        const aspectZ = sfSize.z / (radiusBottom * 2);
+                        sfCrownMesh.scale.set(aspectX, 1, aspectZ);
+                        
+                        // Position precisely over the top skeletal frames
+                        sfCrownMesh.position.set(
+                            sfCenter.x,
+                            sfBox.max.y - (crownHeight / 2) + 1.5, // tiny offset up
+                            sfCenter.z
+                        );
+                        
+                        importedGroup.add(sfCrownMesh);
+                        console.log("Constructed and positioned solid elliptical digital screen panels on Salesforce Tower.");
+                    }
+
+                    importedGroup.add(fbx);
+                    cgtraderModelLoaded = true;
+
+                    // Switch active views
+                    proceduralGroup.visible = false;
+                    importedGroup.visible = true;
+
+                    document.getElementById('loading').innerText = 'CGTrader Model Active';
+                    document.getElementById('loading').style.color = '#00f2fe';
+                    document.getElementById('loading').style.borderColor = 'rgba(0, 242, 254, 0.2)';
+                },
+                (xhr) => {
+                    const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                    if (percent) {
+                        document.getElementById('loading').innerText = `Downloading: ${percent}%`;
+                    }
+                },
+                (error) => {
+                    console.error('Loader error:', error);
+                    document.getElementById('loading').innerText = 'Model not found in assets/';
+                    document.getElementById('loading').style.color = '#ef4444';
+                    document.getElementById('loading').style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                    
+                    // Alert instructions
+                    alert('Could not load local model. Please download the free FBX from CGTrader, rename it to "sanfrancisco-city-skyline.fbx", place it in the "assets/" folder, and run a local server.');
+                }
+            );
+        }
+
+        // --- 2B. Standalone Salesforce Tower (Solo OBJ Showroom) ---
+        let soloTowerLoaded = false;
+        function loadSoloTowerModel() {
+            document.getElementById('loading').innerText = 'Loading Solo Salesforce Tower...';
+            document.getElementById('loading').style.color = '#f59e0b';
+            document.getElementById('loading').style.borderColor = 'rgba(245, 158, 11, 0.2)';
+
+            // Clean previous items in soloTowerGroup if any
+            while (soloTowerGroup.children.length > 0) {
+                soloTowerGroup.remove(soloTowerGroup.children[0]);
+            }
+
+            // Add a beautiful dark showroom reflective circular floor helper
+            const floorGeo = new THREE.RingGeometry(0, 350, 64);
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: 0x050a15,
+                roughness: 0.35,
+                metalness: 0.9,
+                side: THREE.DoubleSide
+            });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            soloTowerGroup.add(floor);
+
+            // Add a subtle grid helper on top of floor for premium industrial design look
+            const grid = new THREE.GridHelper(700, 30, 0x1e293b, 0x0f172a);
+            grid.position.y = 0.1; // ever so slightly above floor
+            soloTowerGroup.add(grid);
+
+            // Add dedicated local spotlights to light up structural panels in solo showroom
+            const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            keyLight.position.set(200, 250, 200);
+            soloTowerGroup.add(keyLight);
+
+            const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.8);
+            fillLight.position.set(-200, 150, -200);
+            soloTowerGroup.add(fillLight);
+
+            const objLoader = new OBJLoader();
+            objLoader.load(
+                'assets/SF-Tower/Salesforse tower_obj.obj',
+                (obj) => {
+                    console.log("Loaded standalone Salesforce Tower:", obj);
+
+                    const box = new THREE.Box3().setFromObject(obj);
+                    const size = new THREE.Vector3();
+                    box.getSize(size);
+                    const center = new THREE.Vector3();
+                    box.getCenter(center);
+
+                    // Scale tower to a stunning showroom height (320 units)
+                    const targetHeight = 320;
+                    const scaleFactor = targetHeight / size.y;
+                    obj.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                    obj.updateMatrixWorld(true);
+
+                    // Position perfectly centered on floor at (0, 0, 0)
+                    obj.position.set(-center.x * scaleFactor, -box.min.y * scaleFactor, -center.z * scaleFactor);
+
+                    // Materials
+                    const crownThreshold = 320 * 0.72; // Top 28% is the tapered cone display, extending down to where the curved ribs end
+
+                    // Setup canvas and dynamic texture context for the scrolling LED panels
+                    if (!crownScreenCtx) {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 1024;
+                        canvas.height = 512;
+                        crownScreenCtx = canvas.getContext('2d');
+
+                        crownScreenTexture = new THREE.CanvasTexture(canvas);
+                        crownScreenTexture.wrapS = THREE.RepeatWrapping;
+                        crownScreenTexture.wrapT = THREE.RepeatWrapping;
+                    }
+
+                    const screenMaterial = new THREE.MeshBasicMaterial({
+                        map: crownScreenTexture,
+                        side: THREE.DoubleSide
+                    });
+
+                    const concreteMaterial = new THREE.MeshStandardMaterial({
+                        color: 0xf1f5f9, // Clean white support columns
+                        roughness: 0.5,
+                        metalness: 0.15,
+                        flatShading: false
+                    });
+
+                    const glassMaterial = new THREE.MeshStandardMaterial({
+                        color: 0x111827, // Metallic reflective glass
+                        roughness: 0.12,
+                        metalness: 0.85
+                    });
+
+                    obj.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+
+                            const name = child.name ? child.name.toLowerCase() : '';
+
+                            // A. Entire Glass Windows / Building Skin gets our animated illuminated swarming water!
+                            // Since the high-resolution OBJ has non-semantic 3ds Max group names, we map them directly:
+                            // - salesforce_02 represents the main glass panel skin of the entire tower.
+                            // - salesforce_13 and salesforce_03 represent the upper crown glass panels of the tower.
+                            if (name === 'salesforce_02' || name === 'salesforce_13' || name === 'salesforce_03') {
+                                child.material = screenMaterial;
+                            }
+                            // B. Structural ribs/columns (keeps structural definition & concrete contours 100% pristine!)
+                            // - salesforce_14 represents the massive bevelled concrete column grid rib structure surrounding the glass.
+                            // - salesforce_04, salesforce_01, salesforce_11, etc. represent primary concrete columns and beams.
+                            else {
+                                child.material = concreteMaterial;
+                            }
+                        }
+                    });
+
+                    soloTowerGroup.add(obj);
+                    soloTowerLoaded = true;
+
+                    // Switch active views and point camera directly to it
+                    proceduralGroup.visible = false;
+                    importedGroup.visible = false;
+                    soloTowerGroup.visible = true;
+
+                    camera.position.set(0, 220, 480);
+                    controls.target.set(0, 150, 0);
+                    controls.update();
+
+                    document.getElementById('loading').innerText = 'Salesforce Tower Active';
+                    document.getElementById('loading').style.color = '#00f2fe';
+                    document.getElementById('loading').style.borderColor = 'rgba(0, 242, 254, 0.2)';
+                },
+                (xhr) => {
+                    const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                    if (percent) {
+                        document.getElementById('loading').innerText = `Building Tower: ${percent}%`;
+                    }
+                },
+                (err) => {
+                    console.error("Error loading solo Salesforce OBJ tower:", err);
+                    document.getElementById('loading').innerText = 'Error loading Tower';
+                    document.getElementById('loading').style.color = '#ef4444';
+                }
+            );
+        }
+
+        // --- 3. UI Controls and Interactions ---
+        let currentMode = 'realistic'; // realistic vs wireframe
+        
+        document.getElementById('view-toggle').addEventListener('click', () => {
+            if (currentMode === 'realistic') {
+                // Switch to Wireframe Mode
+                scene.overrideMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00f2fe,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.15
+                });
+                scene.background = new THREE.Color(0x020617);
+                scene.fog = new THREE.FogExp2(0x020617, 0.0006);
+                document.getElementById('view-toggle').innerText = 'View Mode: Vector Wireframe';
+                currentMode = 'wireframe';
+            } else {
+                // Restore Realistic Mode
+                scene.overrideMaterial = null;
+                document.getElementById('view-toggle').innerText = 'View Mode: Realistic';
+                currentMode = 'realistic';
+                // Sync background and lights back to time-of-day slider
+                updateTimeOfDay(parseFloat(document.getElementById('time-slider').value));
+            }
+        });
+
+        // --- Source Segment Toggling (CGTrader, Sketchfab, Procedural, Solo Tower) ---
+        const sourceCgtrader = document.getElementById('source-cgtrader');
+        const sourceSketchfab = document.getElementById('source-sketchfab');
+        const sourceProcedural = document.getElementById('source-procedural');
+        const sourceSoloTower = document.getElementById('source-solo-tower');
+
+        function setSource(mode) {
+            // Reset button states
+            [sourceCgtrader, sourceSketchfab, sourceProcedural, sourceSoloTower].forEach(btn => {
+                btn.style.background = 'rgba(255, 255, 255, 0.04)';
+                btn.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                btn.style.color = '#cbd5e1';
+            });
+
+            const canvasContainer = document.getElementById('canvas-container');
+            const sketchfabContainer = document.getElementById('sketchfab-container');
+            const rightPanel = document.getElementById('controls-panel-right');
+            const viewToggleBtn = document.getElementById('view-toggle');
+
+            if (mode === 'cgtrader') {
+                sourceCgtrader.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+                sourceCgtrader.style.border = 'none';
+                sourceCgtrader.style.color = 'white';
+
+                canvasContainer.style.display = 'block';
+                sketchfabContainer.style.display = 'none';
+                rightPanel.style.display = 'block';
+                viewToggleBtn.style.display = 'block';
+
+                proceduralGroup.visible = false;
+                soloTowerGroup.visible = false;
+                importedGroup.visible = true;
+
+                if (!cgtraderModelLoaded) {
+                    loadCGTraderModel();
+                } else {
+                    document.getElementById('loading').innerText = 'CGTrader Model Active';
+                }
+            } else if (mode === 'sketchfab') {
+                sourceSketchfab.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+                sourceSketchfab.style.border = 'none';
+                sourceSketchfab.style.color = 'white';
+
+                canvasContainer.style.display = 'none';
+                sketchfabContainer.style.display = 'block';
+                rightPanel.style.display = 'none'; // Sketchfab handles its own lighting and camera controls
+                viewToggleBtn.style.display = 'none';
+
+                document.getElementById('loading').innerText = 'Sketchfab Active';
+            } else if (mode === 'procedural') {
+                sourceProcedural.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+                sourceProcedural.style.border = 'none';
+                sourceProcedural.style.color = 'white';
+
+                canvasContainer.style.display = 'block';
+                sketchfabContainer.style.display = 'none';
+                rightPanel.style.display = 'block';
+                viewToggleBtn.style.display = 'block';
+
+                proceduralGroup.visible = true;
+                soloTowerGroup.visible = false;
+                importedGroup.visible = false;
+
+                document.getElementById('loading').innerText = 'Procedural SF Active';
+            } else if (mode === 'solo-tower') {
+                sourceSoloTower.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+                sourceSoloTower.style.border = 'none';
+                sourceSoloTower.style.color = 'white';
+
+                canvasContainer.style.display = 'block';
+                sketchfabContainer.style.display = 'none';
+                rightPanel.style.display = 'block';
+                viewToggleBtn.style.display = 'block';
+
+                proceduralGroup.visible = false;
+                importedGroup.visible = false;
+                soloTowerGroup.visible = true;
+
+                if (!soloTowerLoaded) {
+                    loadSoloTowerModel();
+                } else {
+                    document.getElementById('loading').innerText = 'Salesforce Tower Active';
+                    camera.position.set(0, 220, 480);
+                    controls.target.set(0, 150, 0);
+                    controls.update();
+                }
+            }
+        }
+
+        sourceCgtrader.addEventListener('click', () => setSource('cgtrader'));
+        sourceSketchfab.addEventListener('click', () => setSource('sketchfab'));
+        sourceProcedural.addEventListener('click', () => setSource('procedural'));
+        sourceSoloTower.addEventListener('click', () => setSource('solo-tower'));
+
+        // --- 4. Animation Loop ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsed = clock.getElapsedTime();
+
+            // Rotate controls smoothly
+            controls.update();
+
+            // 1. Pulsing top light on Salesforce Tower
+            sfCrown.material.color.setHSL(0.5 + Math.sin(elapsed * 2) * 0.1, 1.0, 0.5);
+            sfTopLight.intensity = 2.5 + Math.sin(elapsed * 4) * 1.5;
+
+            // 2. Flowing street traffic particles
+            trafficLines.forEach((line) => {
+                const positions = line.points.geometry.attributes.position.array;
+                const count = positions.length / 3;
+
+                for (let i = 0; i < count; i++) {
+                    const idx = i * 3;
+                    if (line.isEastWest) {
+                        positions[idx] += line.speeds[i]; // Move on X axis
+                        if (positions[idx] > 1000) positions[idx] = -1000;
+                        if (positions[idx] < -1000) positions[idx] = 1000;
+                    } else {
+                        positions[idx + 2] += line.speeds[i]; // Move on Z axis
+                        if (positions[idx + 2] > 1200) positions[idx + 2] = -800;
+                        if (positions[idx + 2] < -800) positions[idx + 2] = 1200;
+                    }
+                }
+                line.points.geometry.attributes.position.needsUpdate = true;
+            });
+
+            // 3. Gentle water surface ripple effect (by moving camera target ever so slightly or direct material updates)
+            materials.water.roughness = 0.15 + Math.sin(elapsed) * 0.03;
+
+            // 4. Digital LED Screens animation for Salesforce Tower crown
+            if (crownScreenCtx && crownScreenTexture) {
+                const width = 1024;
+                const height = 512;
+                const time = elapsed;
+
+                // Read user color slider selection (fallback to 190° Cyan if slider element not present yet)
+                const sliderEl = document.getElementById('cone-color-slider');
+                const userHue = sliderEl ? parseFloat(sliderEl.value) : 190;
+                
+                // Clear background to a deep cosmic dark space color
+                // 4A. Slow fade background clear to let the rising water particles leave glowing bioluminescent fluid trails!
+                crownScreenCtx.fillStyle = `hsla(${userHue}, 100%, 3%, 0.12)`; // Very slow decay for organic liquid trails
+                crownScreenCtx.fillRect(0, 0, width, height);
+
+                // Additive screen blending so water layers and particles glow vibrantly when merging
+                crownScreenCtx.globalCompositeOperation = 'screen';
+
+                // 4B. Initialize water current particles (the swarming fluid) if not already done
+                if (!window.waterParticles) {
+                    window.waterParticles = [];
+                    for (let i = 0; i < 220; i++) {
+                        window.waterParticles.push({
+                            x: Math.random() * width,
+                            y: Math.random() * height,
+                            speedY: 1.6 + Math.random() * 2.8, // Speed climbing upwards
+                            size: 1.2 + Math.random() * 3.2,
+                            waveOffset: Math.random() * Math.PI * 2,
+                            alpha: 0.4 + Math.random() * 0.55
+                        });
+                    }
+                }
+
+                // 4C. Update and Draw each bioluminescent water droplet
+                window.waterParticles.forEach((p) => {
+                    // Surge upwards (water flowing up the building glass!)
+                    p.y -= p.speedY;
+
+                    // Organic fluid horizontal swaying (sine wave current flow field)
+                    const swayFrequency = 0.015;
+                    const swayAmplitude = 2.4;
+                    p.x += Math.sin(p.y * swayFrequency + time * 1.8 + p.waveOffset) * swayAmplitude;
+
+                    // Loop particle back to bottom if it overflows the top
+                    if (p.y < 0) {
+                        p.y = height;
+                        p.x = Math.random() * width;
+                    }
+
+                    // Seamless horizontal wrapping around the cylindrical tower windows
+                    p.x = (p.x + width) % width;
+
+                    // Create beautiful glowing light core for each liquid droplet
+                    const dropletHue = (userHue + Math.sin(time * 0.6 + p.y * 0.01) * 15) % 360;
+                    const dropletGrad = crownScreenCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3.5);
+                    
+                    dropletGrad.addColorStop(0, `hsla(${dropletHue}, 100%, 75%, ${p.alpha})`);
+                    dropletGrad.addColorStop(0.35, `hsla(${(dropletHue + 15) % 360}, 100%, 50%, ${p.alpha * 0.4})`);
+                    dropletGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+                    crownScreenCtx.fillStyle = dropletGrad;
+                    crownScreenCtx.beginPath();
+                    crownScreenCtx.arc(p.x, p.y, p.size * 3.5, 0, Math.PI * 2);
+                    crownScreenCtx.fill();
+                });
+
+                // 4D. Add shimmering vertical ambient water caustics (glowing light ripples)
+                const causticsCount = 3;
+                for (let c = 0; c < causticsCount; c++) {
+                    const waveY = (time * 75 + c * (height / causticsCount)) % height;
+                    const causticGrad = crownScreenCtx.createLinearGradient(0, waveY, 0, waveY + 90);
+                    
+                    const causticHue = (userHue + Math.sin(time * 0.5 + c) * 20) % 360;
+                    causticGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+                    causticGrad.addColorStop(0.5, `hsla(${causticHue}, 100%, 48%, 0.18)`);
+                    causticGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+                    crownScreenCtx.fillStyle = causticGrad;
+                    crownScreenCtx.fillRect(0, waveY, width, 90);
+                }
+
+                // Restore default blend mode
+                crownScreenCtx.globalCompositeOperation = 'source-over';
+
+                // 4E. Overlay horizontal glass panel lines to align with building structure
+                crownScreenCtx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                crownScreenCtx.lineWidth = 1;
+                for (let x = 0; x < width; x += 128) {
+                    crownScreenCtx.beginPath();
+                    crownScreenCtx.moveTo(x, 0);
+                    crownScreenCtx.lineTo(x, height);
+                    crownScreenCtx.stroke();
+                }
+
+                crownScreenTexture.needsUpdate = true;
+            }
+
+            // 5. Update coordinate readouts in real-time
+            document.getElementById('cam-val').innerText = `(${Math.round(camera.position.x)}, ${Math.round(camera.position.y)}, ${Math.round(camera.position.z)})`;
+            document.getElementById('tar-val').innerText = `(${Math.round(controls.target.x)}, ${Math.round(controls.target.y)}, ${Math.round(controls.target.z)})`;
+
+            renderer.render(scene, camera);
+        }
+
+        // --- 5. Window resizing ---
+        window.addEventListener('resize', onWindowResize);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- 6. Sunrise/Sunset, Contrast & Camera Navigation Controls ---
+        function updateTimeOfDay(time) {
+            // Sun angle: mapped so that 12 is Noon (overhead), 6 is Sunrise (east), 18 is Sunset (west), 0/24 is Midnight
+            const angle = ((time - 6) / 24) * Math.PI * 2;
+            
+            // Calculate sun position in a high orbital circle
+            const r = 1600;
+            const x = Math.cos(angle) * r;
+            const y = Math.sin(angle) * r; // positive = day, negative = night
+            const z = Math.sin(angle * 0.5) * 800; // soft corkscrew orbit for natural shadow angles
+            
+            dirLight.position.set(x, Math.max(-200, y), z); // keep sun slightly below horizon at night for soft ambient feel
+
+            // Sun colors and parameters depending on time
+            let sunColor = new THREE.Color();
+            let skyColor = new THREE.Color();
+            let ambientColor = new THREE.Color();
+            let sunIntensity = 0.0;
+            let ambientIntensity = 0.4;
+            let timeString = '';
+
+            // Handle transition states: Day, Sunset, Night, Sunrise
+            if (time >= 6 && time < 17) {
+                // Daytime (6 AM to 5 PM)
+                const t = (time - 6) / 11;
+                
+                sunColor.setHSL(0.12, 0.3, 0.95); // soft creamy white
+                skyColor.setHSL(0.6, 0.6, 0.08 + Math.sin(t * Math.PI) * 0.15); // sky-blue
+                ambientColor.setHex(0xe2e8f0); // Bright, neutral daylight ambient white/grey
+                
+                sunIntensity = 2.0 + Math.sin(t * Math.PI) * 3.0; 
+                ambientIntensity = 1.5 + Math.sin(t * Math.PI) * 1.8; // High ambient light fill
+                timeString = `${formatHour(time)} (Day)`;
+
+                // High skylight global illumination fill to prevent dark shadows/profile outlines
+                hemiLight.color.setHex(0xffffff); 
+                hemiLight.groundColor.setHex(0x475569); 
+                hemiLight.intensity = 1.5;
+                
+            } else if (time >= 17 && time < 20) {
+                // Sunset (5 PM to 8 PM)
+                const t = (time - 17) / 3;
+                
+                // Sunset golden-to-indigo colors
+                sunColor.lerpColors(new THREE.Color(0xffa233), new THREE.Color(0xff3c11), t);
+                skyColor.lerpColors(new THREE.Color(0x0e142c), new THREE.Color(0x04060f), t);
+                ambientColor.lerpColors(new THREE.Color(0xb0a5e6), new THREE.Color(0x111625), t);
+                
+                sunIntensity = (1.0 - t) * 2.0;
+                ambientIntensity = 1.5 - t * 1.1;
+                timeString = `${formatHour(time)} (Sunset)`;
+
+                hemiLight.color.lerpColors(new THREE.Color(0xff9d6c), new THREE.Color(0x1e293b), t);
+                hemiLight.groundColor.lerpColors(new THREE.Color(0x2a1a4a), new THREE.Color(0x020617), t);
+                hemiLight.intensity = (1.5 - t * 1.1);
+                
+            } else if (time >= 20 || time < 5) {
+                // Nighttime (8 PM to 5 AM)
+                sunColor.setHex(0x111622); // moon blue
+                skyColor.setHex(0x03050c); // dark midnight
+                ambientColor.setHex(0x111625); // dark ambient
+                
+                sunIntensity = 0.2;
+                ambientIntensity = 0.4;
+                timeString = `${formatHour(time)} (Night)`;
+
+                hemiLight.color.setHex(0x1e293b);
+                hemiLight.groundColor.setHex(0x020617);
+                hemiLight.intensity = 0.4;
+                
+            } else {
+                // Sunrise (5 AM to 6 AM)
+                const t = (time - 5) / 1;
+                
+                sunColor.lerpColors(new THREE.Color(0xff3c11), new THREE.Color(0xffa233), t);
+                skyColor.lerpColors(new THREE.Color(0x04060f), new THREE.Color(0x0e142c), t);
+                ambientColor.lerpColors(new THREE.Color(0x111625), new THREE.Color(0xb0a5e6), t);
+                
+                sunIntensity = t * 2.0;
+                ambientIntensity = 0.4 + t * 1.1;
+                timeString = `${formatHour(time)} (Sunrise)`;
+
+                hemiLight.color.lerpColors(new THREE.Color(0x1e293b), new THREE.Color(0xff9d6c), t);
+                hemiLight.groundColor.lerpColors(new THREE.Color(0x020617), new THREE.Color(0x2a1a4a), t);
+                hemiLight.intensity = (0.4 + t * 1.1);
+            }
+
+            // Apply light values scaled by their respective contrast sliders
+            const sunFactor = parseFloat(document.getElementById('shadow-slider').value);
+            const ambientFactor = parseFloat(document.getElementById('brightness-slider').value);
+
+            dirLight.color.copy(sunColor);
+            dirLight.intensity = sunIntensity * sunFactor;
+            
+            ambientLight.color.copy(ambientColor);
+            ambientLight.intensity = ambientIntensity * ambientFactor;
+            hemiLight.intensity *= ambientFactor;
+
+            // Dynamically warp sky and fog
+            scene.background.copy(skyColor);
+            scene.fog.color.copy(skyColor);
+            renderer.setClearColor(skyColor);
+
+            document.getElementById('time-display').innerText = timeString;
+        }
+
+        function formatHour(h) {
+            const rounded = Math.floor(h);
+            const mins = Math.floor((h - rounded) * 60).toString().padStart(2, '0');
+            const ampm = rounded >= 12 ? 'PM' : 'AM';
+            let displayHour = rounded % 12;
+            if (displayHour === 0) displayHour = 12;
+            return `${displayHour}:${mins} ${ampm}`;
+        }
+
+        // Connect slider inputs and update numeric displays
+        document.getElementById('time-slider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('time-val').innerText = val.toFixed(1);
+            updateTimeOfDay(val);
+        });
+
+        document.getElementById('brightness-slider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('brightness-val').innerText = val.toFixed(2);
+            renderer.toneMappingExposure = val;
+            updateTimeOfDay(parseFloat(document.getElementById('time-slider').value));
+        });
+
+        document.getElementById('shadow-slider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('shadow-val').innerText = val.toFixed(2);
+            updateTimeOfDay(parseFloat(document.getElementById('time-slider').value));
+        });
+
+        document.getElementById('cone-color-slider').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            let label = "Cyan";
+            if (val < 15) label = "Red";
+            else if (val < 45) label = "Orange";
+            else if (val < 75) label = "Yellow";
+            else if (val < 145) label = "Green";
+            else if (val < 205) label = "Cyan";
+            else if (val < 265) label = "Blue";
+            else if (val < 325) label = "Magenta";
+            else label = "Red";
+            
+            document.getElementById('cone-color-val').innerText = `${label} (${val}°)`;
+        });
+
+        // --- Presets Manager ---
+        const presets = {
+            default_noon: {
+                time: 12.9,
+                brightness: 1.2,
+                shadow: 1.5,
+                cameraPos: { x: 1200, y: 350, z: 1200 },
+                cameraTar: { x: 0, y: 0, z: 0 }
+            },
+            default_morning: {
+                time: 9.75, // 9:45 AM
+                brightness: 1.3,
+                shadow: 1.4,
+                cameraPos: { x: 1100, y: 280, z: 1100 },
+                cameraTar: { x: 0, y: 0, z: 0 }
+            },
+            default_sunset: {
+                time: 18.5, // 6:30 PM
+                brightness: 1.2,
+                shadow: 1.8,
+                cameraPos: { x: 1300, y: 320, z: 1300 },
+                cameraTar: { x: 0, y: 0, z: 0 }
+            }
+        };
+
+        function applyPreset(preset) {
+            camera.position.set(preset.cameraPos.x, preset.cameraPos.y, preset.cameraPos.z);
+            controls.target.set(preset.cameraTar.x, preset.cameraTar.y, preset.cameraTar.z);
+            controls.update();
+
+            document.getElementById('time-slider').value = preset.time;
+            document.getElementById('brightness-slider').value = preset.brightness;
+            document.getElementById('shadow-slider').value = preset.shadow;
+
+            document.getElementById('time-val').innerText = preset.time.toFixed(1);
+            document.getElementById('brightness-val').innerText = preset.brightness.toFixed(2);
+            document.getElementById('shadow-val').innerText = preset.shadow.toFixed(2);
+
+            renderer.toneMappingExposure = preset.brightness;
+            updateTimeOfDay(preset.time);
+        }
+
+        document.getElementById('preset-select').addEventListener('change', (e) => {
+            const key = e.target.value;
+            if (presets[key]) {
+                applyPreset(presets[key]);
+            }
+        });
+
+        document.getElementById('save-preset-btn').addEventListener('click', () => {
+            const name = prompt("Enter a name for this camera & lighting preset:", "Custom Preset");
+            if (!name) return;
+
+            const newPreset = {
+                name: name,
+                time: parseFloat(document.getElementById('time-slider').value),
+                brightness: parseFloat(document.getElementById('brightness-slider').value),
+                shadow: parseFloat(document.getElementById('shadow-slider').value),
+                cameraPos: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+                cameraTar: { x: controls.target.x, y: controls.target.y, z: controls.target.z }
+            };
+
+            const customPresets = JSON.parse(localStorage.getItem('sf_custom_presets') || '[]');
+            customPresets.push(newPreset);
+            localStorage.setItem('sf_custom_presets', JSON.stringify(customPresets));
+            renderCustomPresets();
+        });
+
+        function renderCustomPresets() {
+            const list = document.getElementById('custom-presets-list');
+            list.innerHTML = '';
+            const customPresets = JSON.parse(localStorage.getItem('sf_custom_presets') || '[]');
+
+            customPresets.forEach((p, index) => {
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.justifyContent = 'space-between';
+                div.style.background = 'rgba(255,255,255,0.03)';
+                div.style.border = '1px solid rgba(255,255,255,0.06)';
+                div.style.borderRadius = '4px';
+                div.style.padding = '3px 6px';
+                div.style.gap = '4px';
+
+                const btn = document.createElement('button');
+                btn.innerText = p.name;
+                btn.style.flex = '1';
+                btn.style.background = 'none';
+                btn.style.border = 'none';
+                btn.style.color = '#38bdf8';
+                btn.style.fontSize = '0.68rem';
+                btn.style.textAlign = 'left';
+                btn.style.cursor = 'pointer';
+                btn.style.padding = '0';
+                btn.style.outline = 'none';
+                btn.addEventListener('click', () => applyPreset(p));
+
+                const del = document.createElement('button');
+                del.innerHTML = '&times;';
+                del.style.background = 'none';
+                del.style.border = 'none';
+                del.style.color = '#ef4444';
+                del.style.fontSize = '0.85rem';
+                del.style.fontWeight = '600';
+                del.style.cursor = 'pointer';
+                del.style.padding = '0 2px';
+                del.style.outline = 'none';
+                del.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    if (confirm(`Delete preset "${p.name}"?`)) {
+                        customPresets.splice(index, 1);
+                        localStorage.setItem('sf_custom_presets', JSON.stringify(customPresets));
+                        renderCustomPresets();
+                    }
+                });
+
+                div.appendChild(btn);
+                div.appendChild(del);
+                list.appendChild(div);
+            });
+        }
+
+        // Render any stored presets on page load
+        renderCustomPresets();
+
+        // Zoom + Pan Camera Navigation controls
+        const panSpeed = 60;
+
+        document.getElementById('zoom-in').addEventListener('click', () => {
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+            camera.position.addScaledVector(dir, 150);
+            controls.update();
+        });
+
+        document.getElementById('zoom-out').addEventListener('click', () => {
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+            camera.position.addScaledVector(dir, -150);
+            controls.update();
+        });
+
+        function panCamera(xOffset, yOffset) {
+            const localX = new THREE.Vector3();
+            const localY = new THREE.Vector3();
+            const localZ = new THREE.Vector3();
+            camera.matrix.extractBasis(localX, localY, localZ);
+
+            const offset = new THREE.Vector3();
+            offset.addScaledVector(localX, xOffset);
+            offset.addScaledVector(localY, yOffset);
+
+            camera.position.add(offset);
+            controls.target.add(offset);
+            controls.update();
+        }
+
+        document.getElementById('nav-left').addEventListener('click', () => panCamera(-panSpeed, 0));
+        document.getElementById('nav-right').addEventListener('click', () => panCamera(panSpeed, 0));
+        document.getElementById('nav-up').addEventListener('click', () => panCamera(0, panSpeed));
+        document.getElementById('nav-down').addEventListener('click', () => panCamera(0, -panSpeed));
+
+        document.getElementById('nav-reset').addEventListener('click', () => {
+            camera.position.set(1200, 350, 1200);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        });
+
+        // Initialize at 12:54 PM (Daylight) as the default layout
+        updateTimeOfDay(12.9);
+
+        // Auto-load the CGTrader high-resolution skyline by default on startup
+        loadCGTraderModel();
+
+        animate();
+    </script>
+</body>
+</html>
