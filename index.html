@@ -96,6 +96,7 @@
             margin-bottom: 4px;
         }
         #loading {
+            display: none !important;
             position: absolute;
             top: 20px;
             right: 20px;
@@ -300,13 +301,14 @@
         
         <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; margin-bottom: 5px; letter-spacing: 0.05em;">ACTIVE 3D SOURCE</div>
         <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px;">
-            <button id="source-cgtrader" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; text-align: left; background: linear-gradient(135deg, #00b4db, #0083b0); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; outline: none;">🏙️ CGTrader (High-Res 3D)</button>
-            <button id="source-sketchfab" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; outline: none;">📸 Sketchfab (Photoreal Scan)</button>
-            <button id="source-procedural" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; outline: none;">⚙️ Procedural (Three.js)</button>
-            <button id="source-solo-tower" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; outline: none;">🗼 Salesforce Tower (Solo)</button>
+            <div style="display: flex; gap: 4px; width: 100%;">
+                <button id="source-cgtrader" class="source-btn" style="flex: 1; padding: 6px 10px; font-size: 0.72rem; text-align: left; background: linear-gradient(135deg, #00b4db, #0083b0); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; outline: none; margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🏙️ CGTrader (High-Res 3D)</button>
+                <button id="view-toggle" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; background: rgba(0, 180, 219, 0.2); border: 1px solid rgba(0, 180, 219, 0.4); color: #00f2fe; border-radius: 4px; cursor: pointer; font-weight: 600; outline: none; transition: all 0.2s; min-width: 80px; text-align: center; margin: 0;">Realistic</button>
+            </div>
+            <button id="source-procedural" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; outline: none; margin: 0;">⚙️ Procedural (Three.js)</button>
+            <button id="source-sketchfab" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; outline: none; margin: 0;">📸 Sketchfab (Photoreal Scan)</button>
+            <button id="source-solo-tower" class="source-btn" style="padding: 6px 10px; font-size: 0.72rem; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; outline: none; margin: 0;">🗼 Salesforce Tower (Solo)</button>
         </div>
-
-        <button id="view-toggle" class="btn" style="padding: 6px 10px; font-size: 0.75rem; margin-top: 4px;">View Mode: Realistic</button>
     </div>
 
     <!-- Sunrise/Sunset, Contrast, and Camera XYZ controls -->
@@ -1341,7 +1343,7 @@
                 // Switch to Wireframe Mode
                 scene.background = new THREE.Color(0x020617);
                 scene.fog = new THREE.FogExp2(0x020617, 0.0006);
-                document.getElementById('view-toggle').innerText = 'View Mode: Vector Wireframe';
+                document.getElementById('view-toggle').innerText = 'Wireframe';
                 currentMode = 'wireframe';
 
                 // Traverse and apply wireframe to procedural city meshes
@@ -1385,7 +1387,7 @@
                 });
             } else {
                 // Restore Realistic Mode
-                document.getElementById('view-toggle').innerText = 'View Mode: Realistic';
+                document.getElementById('view-toggle').innerText = 'Realistic';
                 currentMode = 'realistic';
 
                 // Restore original materials
@@ -1488,7 +1490,7 @@
                 canvasContainer.style.display = 'block';
                 sketchfabContainer.style.display = 'none';
                 rightPanel.style.display = 'block';
-                viewToggleBtn.style.display = 'block';
+                viewToggleBtn.style.display = 'none';
 
                 proceduralGroup.visible = true;
                 soloTowerGroup.visible = false;
@@ -1503,7 +1505,7 @@
                 canvasContainer.style.display = 'block';
                 sketchfabContainer.style.display = 'none';
                 rightPanel.style.display = 'block';
-                viewToggleBtn.style.display = 'block';
+                viewToggleBtn.style.display = 'none';
 
                 proceduralGroup.visible = false;
                 importedGroup.visible = false;
